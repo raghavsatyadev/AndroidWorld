@@ -37,6 +37,10 @@ See [FEATURES.md](FEATURES.md) for the full feature matrix and what is still ope
 Modules: `:domain`, `:application`, `:adapters-jvm` and `:adapters-adb` are the device core
 (package `io.github.raghavsatyadev.androidworld.core`); `:desktop` is the app (package `io.github.raghavsatyadev.androidworld.desktop`).
 
+## License
+
+MIT, see [LICENSE](LICENSE). Third-party code keeps its own license, listed below.
+
 ## Credits
 
 AndroidWorld builds on three projects, used with their authors' permission:
