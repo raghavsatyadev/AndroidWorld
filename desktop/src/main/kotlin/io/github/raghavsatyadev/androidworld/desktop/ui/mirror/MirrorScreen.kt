@@ -92,6 +92,7 @@ fun MirrorScreen(graph: AppGraph) {
             FilledTonalIconButton(onClick = { mirror.key(AndroidKey.BACK) }, enabled = running) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
             FilledTonalIconButton(onClick = { mirror.key(AndroidKey.HOME) }, enabled = running) { Icon(Icons.Filled.Home, "Home") }
             FilledTonalIconButton(onClick = { mirror.key(AndroidKey.APP_SWITCH) }, enabled = running) { Icon(Icons.Filled.Apps, "Recent apps") }
+            RecordingControls(graph.recording)
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

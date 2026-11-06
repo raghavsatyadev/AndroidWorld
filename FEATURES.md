@@ -30,8 +30,8 @@ Legend: **R** reuse core code · **P** port logic to Kotlin · **CLI** wrap `and
 | App details: shared prefs + SQLite editor, permissions, deep links | R | 2 |
 | Deep link launcher with history | R | 2 |
 | Quick toggles, font scale, density, locale, location | R | 2 |
-| Proxy + emulator network throttle | R | 2 |
-| Mirroring + recording (scrcpy) | R | 2 |
+| Proxy + emulator network throttle (done) | R | 2 |
+| Mirroring + recording (scrcpy) (done) | R | 2 |
 | Layout inspector + accessibility audit | R | 3 |
 | Emulators: list/start/stop/create/delete (done) | CLI | 2 |
 | System images download | CLI (`android sdk`) | 3 |

@@ -3,6 +3,7 @@ package io.github.raghavsatyadev.androidworld.core.application.recording
 import io.github.raghavsatyadev.androidworld.core.domain.adb.AdbDeviceRequest
 import io.github.raghavsatyadev.androidworld.core.domain.adb.AdbOperation
 import io.github.raghavsatyadev.androidworld.core.domain.adb.AdbOutcome
+import io.github.raghavsatyadev.androidworld.core.domain.adb.AdbShellCommand
 import io.github.raghavsatyadev.androidworld.core.domain.adb.AdbTransport
 import io.github.raghavsatyadev.androidworld.core.domain.adb.DeviceSerial
 import io.github.raghavsatyadev.androidworld.core.domain.capture.CaptureDestination
@@ -26,6 +27,7 @@ import io.github.raghavsatyadev.androidworld.core.domain.recording.RecordingStar
 import io.github.raghavsatyadev.androidworld.core.domain.recording.ScrcpyRecording
 import io.github.raghavsatyadev.androidworld.core.domain.time.MonotonicClock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -35,7 +37,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Clock
 
 /** Bounded request/response defaults (ADR 0005) for the pull/cleanup steps that follow a stopped
@@ -45,8 +50,13 @@ import kotlin.time.Clock
 val DEFAULT_RECORDING_PULL_TIMEOUT: Duration = 30.seconds
 val DEFAULT_RECORDING_CLEANUP_TIMEOUT: Duration = 10.seconds
 
-/** How long scrcpy gets after SIGTERM to write the MP4's index before it is killed. */
+/** How long scrcpy gets to write the MP4's index after its server is stopped, before it is killed. */
 val SCRCPY_RECORDING_STOP_GRACE_PERIOD: Duration = 10.seconds
+
+/** A finished MP4 is never this small; a smaller file is a header with no frames or index. */
+private const val MIN_RECORDING_BYTES = 1024L
+private const val SERVER_LOOKUP_ATTEMPTS = 25
+private val SERVER_LOOKUP_INTERVAL: Duration = 200.milliseconds
 
 /**
  * Owns one cancellable remote `screenrecord` session per explicit [DeviceSerial] (task 020),
@@ -81,8 +91,9 @@ val SCRCPY_RECORDING_STOP_GRACE_PERIOD: Duration = 10.seconds
  * When [toolLocator] and [processExecutor] are given and a recent enough scrcpy is found
  * ([ScrcpyRecording.supports]), the recording runs on the host through scrcpy instead, written
  * straight into the capture target's [CaptureTarget.writablePath]: `screenrecord` stops after 180 s,
- * scrcpy does not. Stopping sends scrcpy SIGTERM and waits [SCRCPY_RECORDING_STOP_GRACE_PERIOD] for
- * it to finish the file.
+ * scrcpy does not. Stopping ends this session's scrcpy server on the device
+ * ([ScrcpyRecording.stopServer]) so the client finishes the file itself, and kills the client only if
+ * it has not exited within [SCRCPY_RECORDING_STOP_GRACE_PERIOD].
  */
 class RecordingSessionManager(
     private val scope: CoroutineScope,
@@ -101,6 +112,8 @@ class RecordingSessionManager(
     private class SessionEntry(initial: RecordingSessionState) {
         val state = MutableStateFlow(initial)
         var job: Job? = null
+        /** The `scid` of the scrcpy server this session records from, once it has been seen. */
+        var scrcpyServerId: String? = null
     }
 
     private val sessions = mutableMapOf<DeviceSerial, SessionEntry>()
@@ -145,7 +158,38 @@ class RecordingSessionManager(
         }
 
         entry.state.value = RecordingSessionState.Stopping(serial)
-        entry.job?.cancel()
+        val job = entry.job
+        val serverId = entry.scrcpyServerId
+        if (job == null || serverId == null) {
+            job?.cancel()
+            return
+        }
+        scope.launch(dispatchers.default) {
+            shell(serial, ScrcpyRecording.stopServer(serverId))
+            if (withTimeoutOrNull(SCRCPY_RECORDING_STOP_GRACE_PERIOD) { job.join() } == null) job.cancel()
+        }
+    }
+
+    private suspend fun shell(serial: DeviceSerial, command: AdbShellCommand): String? = try {
+        adbTransport.executeText(AdbDeviceRequest(serial, AdbOperation.Shell(command), cleanupTimeout))
+            .takeIf { it.outcome is AdbOutcome.Completed }?.stdout
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (_: Exception) {
+        null
+    }
+
+    private suspend fun scrcpyServerIds(serial: DeviceSerial): Set<String>? =
+        shell(serial, ScrcpyRecording.listProcesses())?.let(ScrcpyRecording::serverIds)
+
+    /** Polls for the one scrcpy server that was not running before this session started its client. */
+    private suspend fun findNewServer(serial: DeviceSerial, before: Set<String>): String? {
+        repeat(SERVER_LOOKUP_ATTEMPTS) {
+            delay(SERVER_LOOKUP_INTERVAL)
+            val fresh = (scrcpyServerIds(serial) ?: return null) - before
+            if (fresh.size == 1) return fresh.first()
+        }
+        return null
     }
 
     private fun entryFor(serial: DeviceSerial): SessionEntry =
@@ -223,11 +267,19 @@ class RecordingSessionManager(
         )
         var outcome: ProcessOutcome? = null
         var firstError: String? = null
+        entry.scrcpyServerId = null
+        val serversBefore = scrcpyServerIds(serial)
         try {
             entry.state.value = RecordingSessionState.Recording(serial, monotonicClock.markNow())
-            executor.execute(request).collect { event ->
-                if (firstError == null) firstError = scrcpyErrorMessage(event)
-                if (event is ProcessEvent.Completed) outcome = event.outcome
+            coroutineScope {
+                val finder = serversBefore?.let { before ->
+                    launch { entry.scrcpyServerId = findNewServer(serial, before) }
+                }
+                executor.execute(request).collect { event ->
+                    if (firstError == null) firstError = scrcpyErrorMessage(event)
+                    if (event is ProcessEvent.Completed) outcome = event.outcome
+                }
+                finder?.cancel()
             }
             entry.state.value = RecordingSessionState.Stopping(serial)
             finishScrcpyRecording(serial, entry, target, outcome, firstError)
@@ -245,7 +297,7 @@ class RecordingSessionManager(
         outcome: ProcessOutcome?,
         firstError: String?,
     ) {
-        if (target.size() > 0L) {
+        if (target.size() >= MIN_RECORDING_BYTES) {
             entry.state.value = RecordingSessionState.Saved(serial, target.commit())
             return
         }

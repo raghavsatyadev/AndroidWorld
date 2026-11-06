@@ -52,6 +52,8 @@ import io.github.raghavsatyadev.androidworld.core.application.diagnostics.Loggin
 import io.github.raghavsatyadev.androidworld.core.application.diagnostics.LoggingProcessExecutor
 import io.github.raghavsatyadev.androidworld.core.application.diagnostics.LoggingToolLocator
 import io.github.raghavsatyadev.androidworld.core.application.feedback.FeedbackIntent
+import io.github.raghavsatyadev.androidworld.core.application.recording.RecordingSessionManager
+import io.github.raghavsatyadev.androidworld.core.application.recording.RecordingViewModel
 import io.github.raghavsatyadev.androidworld.core.application.feedback.FeedbackViewModel
 import io.github.raghavsatyadev.androidworld.core.application.layout.CaptureLayoutUseCase
 import io.github.raghavsatyadev.androidworld.core.application.locale.DeviceLocaleUseCase
@@ -186,6 +188,25 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
             clipboard = DesktopImageClipboard,
             copyToClipboard = { store.state.copyScreenshotsToClipboard },
             pngSource = androidCli::screenshot,
+        ),
+        revealInFileManager = DesktopRevealInFileManager(),
+        feedback = feedback,
+    )
+
+    /** Screen recording: scrcpy on the host when available, else `screenrecord` on the device. */
+    val recording = RecordingViewModel(
+        scope = childScope(),
+        dispatchers = dispatchers,
+        selectedDeviceState = selectedDevice.state,
+        sessionManager = RecordingSessionManager(
+            scope = childScope(),
+            dispatchers = dispatchers,
+            adbTransport = adbTransport,
+            captureDestination = SettingsBackedCaptureDestination(adapters.settings),
+            fileNamePolicy = TimestampFileNamePolicy(extension = "mp4"),
+            monotonicClock = SystemMonotonicClock,
+            toolLocator = toolLocator,
+            processExecutor = processExecutor,
         ),
         revealInFileManager = DesktopRevealInFileManager(),
         feedback = feedback,

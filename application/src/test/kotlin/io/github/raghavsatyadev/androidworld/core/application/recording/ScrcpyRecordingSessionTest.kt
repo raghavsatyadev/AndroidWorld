@@ -28,6 +28,9 @@ import io.github.raghavsatyadev.androidworld.core.domain.process.ProcessRequest
 import io.github.raghavsatyadev.androidworld.core.domain.recording.RecordingSessionError
 import io.github.raghavsatyadev.androidworld.core.domain.recording.RecordingSessionState
 import io.github.raghavsatyadev.androidworld.core.domain.recording.ScrcpyRecording
+import io.github.raghavsatyadev.androidworld.core.domain.adb.AdbDeviceRequest
+import io.github.raghavsatyadev.androidworld.core.domain.adb.AdbOperation
+import kotlinx.coroutines.channels.awaitClose
 import io.github.raghavsatyadev.androidworld.core.domain.time.FakeMonotonicClock
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -61,8 +64,14 @@ private class RecordingScrcpyExecutor(
 
 private class StreamCountingAdbTransport : AdbTransport {
     val streamRequests = mutableListOf<AdbRequest>()
+    val textRequests = mutableListOf<AdbRequest>()
+    /** What `ps` prints on the device; tests set it to show a scrcpy server starting. */
+    var processes = ""
 
-    override suspend fun executeText(request: AdbRequest) = AdbTextResult(AdbOutcome.Completed(0), "", "")
+    override suspend fun executeText(request: AdbRequest): AdbTextResult {
+        textRequests += request
+        return AdbTextResult(AdbOutcome.Completed(0), processes, "")
+    }
 
     override fun executeStream(request: AdbRequest): Flow<AdbStreamEvent> {
         streamRequests += request
@@ -197,7 +206,7 @@ class ScrcpyRecordingSessionTest {
         val h = harness(
             script = { destination ->
                 flow {
-                    destination.targets.single().externalBytes = 10
+                    destination.targets.single().externalBytes = 4_096
                     emit(ProcessEvent.Completed(ProcessOutcome.Completed(0)))
                 }
             },
@@ -207,6 +216,55 @@ class ScrcpyRecordingSessionTest {
         h.settle()
 
         h.manager.stateFor(serial).value.shouldBeInstanceOf<RecordingSessionState.Saved>()
+    }
+
+    @Test
+    fun `stopping ends this session's scrcpy server on the device so scrcpy can finish the file`() {
+        var finish: (() -> Unit)? = null
+        val h = harness(
+            script = { destination ->
+                kotlinx.coroutines.flow.callbackFlow {
+                    finish = {
+                        destination.targets.single().externalBytes = 4_096
+                        trySend(ProcessEvent.Completed(ProcessOutcome.Completed(0)))
+                        close()
+                    }
+                    awaitClose()
+                }
+            },
+        )
+        h.transport.processes = "app_process / com.genymobile.scrcpy.Server 3.0 scid=1111aaaa\n"
+        h.manager.start(serial)
+        h.settle()
+        h.transport.processes += "app_process / com.genymobile.scrcpy.Server 3.0 scid=2222bbbb\n"
+        h.scope.advanceTimeBy(500)
+        h.scope.runCurrent()
+
+        h.manager.stop(serial)
+        h.settle()
+
+        val pkill = h.transport.textRequests.map { ((it as AdbDeviceRequest).operation as AdbOperation.Shell).command }
+            .last()
+        pkill shouldBe ScrcpyRecording.stopServer("2222bbbb")
+        h.manager.stateFor(serial).value.shouldBeInstanceOf<RecordingSessionState.Stopping>()
+
+        finish!!.invoke()
+        h.settle()
+        h.manager.stateFor(serial).value.shouldBeInstanceOf<RecordingSessionState.Saved>()
+    }
+
+    @Test
+    fun `a file with only a header is not reported as a saved recording`() {
+        val h = harness()
+        h.manager.start(serial)
+        h.settle()
+        h.destination.targets.single().externalBytes = 48
+
+        h.manager.stop(serial)
+        h.settle()
+
+        h.destination.targets.single().discarded shouldBe true
+        h.manager.stateFor(serial).value.shouldBeInstanceOf<RecordingSessionState.Error>()
     }
 
     @Test
