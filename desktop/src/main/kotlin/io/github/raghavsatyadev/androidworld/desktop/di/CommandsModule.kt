@@ -4,6 +4,10 @@ import io.github.raghavsatyadev.androidworld.desktop.confirm.ConfirmRequest
 import io.github.raghavsatyadev.androidworld.core.application.commands.CommandBrowserViewModel
 import io.github.raghavsatyadev.androidworld.core.application.commands.DumpsysViewModel
 import io.github.raghavsatyadev.androidworld.core.application.commands.ShellCommandRunner
+import io.github.raghavsatyadev.androidworld.core.application.commands.TerminalViewModel
+import io.github.raghavsatyadev.androidworld.core.adapters.jvm.process.JvmInteractiveProcessLauncher
+import io.github.raghavsatyadev.androidworld.core.domain.discovery.DiscoveryOutcome
+import io.github.raghavsatyadev.androidworld.core.domain.discovery.ToolId
 import io.github.raghavsatyadev.androidworld.core.domain.device.DeviceCommandContext
 import io.github.raghavsatyadev.androidworld.core.domain.device.toCommandContext
 import kotlinx.coroutines.flow.SharingStarted
@@ -11,7 +15,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * The Commands area: the shell command browser and the dumpsys viewer. Destructive commands are
+ * The Commands area: the shell command browser, the adb shell terminal and the dumpsys viewer. Destructive commands are
  * confirmed through the app's dialog, which names the device and shows the exact command line.
  */
 class CommandsModule(core: AppGraph) {
@@ -40,4 +44,12 @@ class CommandsModule(core: AppGraph) {
     )
 
     val dumpsys = DumpsysViewModel(core.childScope(), core.dispatchers, runner, commandContext)
+
+    val terminal = TerminalViewModel(
+        scope = core.childScope(),
+        dispatchers = core.dispatchers,
+        launcher = JvmInteractiveProcessLauncher(),
+        adbPath = { (core.toolLocator.locate(ToolId.Adb) as? DiscoveryOutcome.Found)?.tool?.path?.value },
+        commandContext = commandContext,
+    )
 }

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>AndroidWorld</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E8B45"/>
+      <stop offset="1" stop-color="#0F4A22"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BCEBF0"/>
+      <stop offset="1" stop-color="#A4F5A8"/>
+    </linearGradient>
+    <clipPath id="front"><rect x="0" y="262" width="512" height="250"/></clipPath>
+    <clipPath id="globe"><circle cx="256" cy="262" r="78"/></clipPath>
+  </defs>
+
+  <!-- squircle tile -->
+  <rect x="16" y="16" width="480" height="480" rx="132" fill="url(#bg)"/>
+
+  <!-- orbit behind the phone -->
+  <ellipse cx="256" cy="262" rx="214" ry="74" fill="none" stroke="#A4F5A8" stroke-opacity="0.45"
+           stroke-width="14" transform="rotate(-24 256 262)"/>
+
+  <!-- phone -->
+  <rect x="158" y="76" width="196" height="372" rx="44" fill="#002109"/>
+  <rect x="172" y="106" width="168" height="312" rx="30" fill="url(#screen)"/>
+  <rect x="230" y="88" width="52" height="8" rx="4" fill="#38656A"/>
+
+  <!-- globe on the screen -->
+  <circle cx="256" cy="262" r="78" fill="#1B6D2F"/>
+  <g clip-path="url(#globe)" fill="none" stroke="#A4F5A8" stroke-width="7" stroke-linecap="round">
+    <ellipse cx="256" cy="262" rx="34" ry="78"/>
+    <line x1="256" y1="180" x2="256" y2="344"/>
+    <line x1="170" y1="262" x2="342" y2="262"/>
+    <path d="M182 222 Q256 238 330 222"/>
+    <path d="M182 302 Q256 286 330 302"/>
+  </g>
+  <circle cx="256" cy="262" r="78" fill="none" stroke="#002109" stroke-width="6"/>
+
+  <!-- front half of the orbit passes over the phone; a second device rides on it -->
+  <g transform="rotate(-24 256 262)">
+    <ellipse cx="256" cy="262" rx="214" ry="74" fill="none" stroke="#A4F5A8" stroke-width="14"
+             clip-path="url(#front)"/>
+    <circle cx="420" cy="214" r="24" fill="#BCEBF0" stroke="#002109" stroke-width="8"/>
+  </g>
+</svg>

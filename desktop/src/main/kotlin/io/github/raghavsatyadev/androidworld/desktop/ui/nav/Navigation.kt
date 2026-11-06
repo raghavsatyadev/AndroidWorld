@@ -29,6 +29,7 @@ enum class Section(val label: String) {
     Avds("Emulators"),
     Commands("Commands"),
     Dumpsys("dumpsys"),
+    Terminal("Shell"),
     General("General"),
 }
 
@@ -43,7 +44,7 @@ enum class Area(val label: String, val icon: ImageVector, val sections: List<Sec
     Screen("Screen", Icons.Filled.ScreenShare, listOf(Section.Share)),
     Logcat("Logcat", Icons.AutoMirrored.Filled.Notes, listOf(Section.Logcat)),
     Emulators("Emulators", Icons.Filled.Devices, listOf(Section.Avds)),
-    Commands("Commands", Icons.Filled.Terminal, listOf(Section.Commands, Section.Dumpsys)),
+    Commands("Commands", Icons.Filled.Terminal, listOf(Section.Commands, Section.Terminal, Section.Dumpsys)),
     Settings("Settings", Icons.Filled.Settings, listOf(Section.General)),
 }
 
