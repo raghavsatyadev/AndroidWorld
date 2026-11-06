@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -89,6 +90,18 @@ private fun ProxyCard(state: ProxyViewState, onIntent: (ProxyIntent) -> Unit) {
         TextButton(onClick = { onIntent(ProxyIntent.UseComputerIp) }, enabled = !state.isResolvingIp) {
             Icon(Icons.Filled.Computer, null, Modifier.padding(end = 8.dp))
             Text(if (state.isResolvingIp) "Finding this computer's IP…" else "Use this computer's IP")
+        }
+        if (state.ipChoices.isNotEmpty()) {
+            Caption("This computer has several networks. Pick the one the device can reach:")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                state.ipChoices.forEach { candidate ->
+                    AssistChip(
+                        onClick = { onIntent(ProxyIntent.EditHost(candidate.ipv4Address)) },
+                        label = { Text("${candidate.displayName} · ${candidate.ipv4Address}") },
+                        leadingIcon = { Icon(Icons.Filled.Lan, null) },
+                    )
+                }
+            }
         }
         if (state.recents.isNotEmpty()) {
             Caption("Recent")

@@ -573,7 +573,7 @@ class ProxyControllerTest {
     }
 
     @Test
-    fun `Use my computer IP surfaces ambiguity as an actionable error without filling the field`() = runTest {
+    fun `Use my computer IP offers the interfaces to pick from when there are several`() = runTest {
         val transport = FakeAdbTransport(textScript = { completedText(":0") })
         val hostNetworkInfo = FakeHostNetworkInfo(
             enumeration = HostInterfaceEnumeration.Success(
@@ -591,7 +591,8 @@ class ProxyControllerTest {
         scope.runCurrent()
 
         controller.state.value.hostInput shouldBe ""
-        controller.state.value.error shouldBe "Multiple network interfaces found — choose one manually"
+        controller.state.value.error shouldBe null
+        controller.state.value.ipChoices.size shouldBe 2
         controller.state.value.isBusy shouldBe false
     }
 

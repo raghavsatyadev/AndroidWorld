@@ -1,6 +1,7 @@
 package io.github.raghavsatyadev.androidworld.core.application.network
 
 import io.github.raghavsatyadev.androidworld.core.domain.adb.DeviceSerial
+import io.github.raghavsatyadev.androidworld.core.domain.network.NetworkInterfaceCandidate
 import io.github.raghavsatyadev.androidworld.core.domain.network.ProxyEndpoint
 import io.github.raghavsatyadev.androidworld.core.domain.network.ProxyReadState
 
@@ -18,7 +19,8 @@ import io.github.raghavsatyadev.androidworld.core.domain.network.ProxyReadState
  * valid); [canSubmit] is `true` only when both fields are non-blank and valid, matching
  * `design/README.md` §6's "invalid port ... the primary action is disabled." [recents] is the
  * project-scoped MRU list (task 032, ADR 0006's `recentProxies`), preserved across device switches
- * since it is not per-serial. [isResolvingIp] reflects an in-flight "Use my computer IP" lookup.
+ * since it is not per-serial. [isResolvingIp] reflects an in-flight "Use my computer IP" lookup;
+ * [ipChoices] lists the interfaces to pick from when that lookup finds more than one.
  */
 data class ProxyViewState(
     val serial: DeviceSerial? = null,
@@ -32,6 +34,7 @@ data class ProxyViewState(
     val portError: String? = null,
     val recents: List<ProxyEndpoint> = emptyList(),
     val isResolvingIp: Boolean = false,
+    val ipChoices: List<NetworkInterfaceCandidate> = emptyList(),
 ) {
     val canSubmit: Boolean
         get() = hostInput.isNotBlank() && portInput.isNotBlank() && hostError == null && portError == null

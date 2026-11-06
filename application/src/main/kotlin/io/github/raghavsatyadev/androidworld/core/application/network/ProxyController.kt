@@ -160,7 +160,7 @@ class ProxyController(
 
     private fun editHost(text: String) {
         val hostError = if (text.isBlank()) null else (ProxyHost.parse(text) as? ProxyHostResult.Invalid)?.reason
-        _state.value = _state.value.copy(hostInput = text, hostError = hostError)
+        _state.value = _state.value.copy(hostInput = text, hostError = hostError, ipChoices = emptyList())
     }
 
     private fun editPort(text: String) {
@@ -178,7 +178,7 @@ class ProxyController(
     }
 
     private fun useComputerIp() {
-        _state.value = _state.value.copy(isResolvingIp = true, error = null)
+        _state.value = _state.value.copy(isResolvingIp = true, error = null, ipChoices = emptyList())
         enqueue(ProxyWorkItem.ResolveIp(generation))
     }
 
@@ -326,10 +326,7 @@ class ProxyController(
                 hostError = null,
                 isResolvingIp = false,
             )
-            is HostIpv4Result.Ambiguous -> _state.value.copy(
-                isResolvingIp = false,
-                error = "Multiple network interfaces found — choose one manually",
-            )
+            is HostIpv4Result.Ambiguous -> _state.value.copy(isResolvingIp = false, ipChoices = result.candidates)
             HostIpv4Result.NotFound -> _state.value.copy(
                 isResolvingIp = false,
                 error = "No usable network interface found",
