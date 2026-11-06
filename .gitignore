@@ -1,0 +1,11 @@
+build/
+.gradle/
+.kotlin/
+graphify-out/
+*.iml
+.idea/
+.claude/.turn*
+.claude/.last-prompt
+
+RESUME.md
+.claude/
