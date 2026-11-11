@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.4.21"
+kotlin = "2.5.0-RC"
 compose = "1.13.0-beta02"
 coroutines = "1.11.0"
 datetime = "0.7.1"
