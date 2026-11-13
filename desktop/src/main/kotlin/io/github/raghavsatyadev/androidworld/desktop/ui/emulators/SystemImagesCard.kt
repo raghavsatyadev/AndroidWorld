@@ -60,7 +60,14 @@ import kotlinx.coroutines.delay
 fun SystemImagesCard(vm: SystemImagesViewModel) {
     val state by vm.state.collectAsState()
     LaunchedEffect(vm) { vm.handle(SystemImagesIntent.Load) }
-    if (state.cliMissing) return
+    if (state.cliMissing) {
+        SectionCard("System images") {
+            Caption(
+                "System images need Google's android CLI and an Android SDK. Set ANDROID_HOME or ANDROID_SDK_ROOT to your SDK folder and restart AndroidWorld.",
+            )
+        }
+        return
+    }
 
     SectionCard(
         "System images",

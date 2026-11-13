@@ -19,7 +19,12 @@ object AvdListParser {
         val header = lines[headerIndex]
         val starts = columns.map { header.indexOf(it) }
         if (starts.any { it < 0 } || starts != starts.sorted()) return emptyList()
-        return lines.drop(headerIndex + 1).filter { it.isNotBlank() }.mapNotNull { row ->
+        return lines.drop(headerIndex + 1).filter { row ->
+            val trimmed = row.trim()
+            trimmed.isNotBlank() &&
+                !trimmed.startsWith("OpenJDK") &&
+                !trimmed.contains("VM warning:")
+        }.mapNotNull { row ->
             val cells = starts.indices.map { i ->
                 val from = starts[i].coerceAtMost(row.length)
                 val to = (starts.getOrNull(i + 1) ?: row.length).coerceAtMost(row.length)
