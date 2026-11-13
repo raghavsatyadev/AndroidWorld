@@ -12,6 +12,8 @@ package io.github.raghavsatyadev.androidworld.core.domain.network
  *   `docker*`, `veth*`/`vEthernet*`, `virbr*`, `br-*`, `utun*`/`tun*`/`tap*`, `vboxnet*`,
  *   `vmnet*`, `ppp*`, `awdl*`, `llw*`, `anpi*`, `bridge*`, `gif*`, `stf*` — covering the common
  *   Docker/Linux, Windows Hyper-V, and macOS VPN/AirDrop/tunnel adapter naming conventions)
+ * - virtual adapters recognised by display name (`Hyper-V`, `vEthernet`, VirtualBox host-only,
+ *   VMware) — on Windows Java's interface name is a generic `ethN`, so only this catches them
  * - link-local addresses (`169.254.0.0/16`, RFC 3927 — IPv6 link-local is out of scope, IPv4 only)
  * - malformed/non-IPv4 address strings
  *
@@ -26,6 +28,10 @@ object HostIpv4SelectionPolicy {
     private val virtualInterfaceNamePrefixes = listOf(
         "docker", "veth", "virbr", "br-", "utun", "tun", "tap", "vboxnet", "vmnet", "ppp",
         "awdl", "llw", "anpi", "bridge", "gif", "stf",
+    )
+
+    private val virtualDisplayNameMarkers = listOf(
+        "hyper-v", "vethernet", "virtualbox host-only", "vmware virtual ethernet",
     )
 
     private val ipv4Pattern = Regex(
@@ -48,12 +54,20 @@ object HostIpv4SelectionPolicy {
         candidate.isUp &&
             !candidate.isLoopback &&
             !isVirtualInterfaceName(candidate.interfaceName) &&
+            !isVirtualDisplayName(candidate.displayName) &&
             isValidIpv4Address(candidate.ipv4Address) &&
             !isLinkLocalIpv4Address(candidate.ipv4Address)
 
     private fun isVirtualInterfaceName(name: String): Boolean {
         val normalized = name.lowercase()
         return virtualInterfaceNamePrefixes.any { normalized.startsWith(it) }
+    }
+
+    /** Windows names NICs `eth3`/`net5` in Java; only the display name (the adapter description)
+     *  shows that it is a Hyper-V/WSL, VirtualBox or VMware virtual adapter. */
+    private fun isVirtualDisplayName(displayName: String): Boolean {
+        val normalized = displayName.lowercase()
+        return virtualDisplayNameMarkers.any { normalized.contains(it) }
     }
 
     private fun isValidIpv4Address(address: String): Boolean = ipv4Pattern.matches(address)

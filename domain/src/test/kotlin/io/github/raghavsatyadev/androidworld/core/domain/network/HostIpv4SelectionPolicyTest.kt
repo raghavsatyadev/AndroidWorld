@@ -57,6 +57,19 @@ class HostIpv4SelectionPolicyTest {
     }
 
     @Test
+    fun `excludes Hyper-V adapters that Windows names generically`() {
+        val wifi = candidate(interfaceName = "wlan1", displayName = "Intel(R) Dual Band Wireless-AC 7265")
+        val hyperV = candidate(
+            interfaceName = "eth3",
+            displayName = "Hyper-V Virtual Ethernet Adapter #2",
+            ipv4Address = "172.27.48.1",
+        )
+        val wslSwitch = candidate(interfaceName = "eth7", displayName = "vEthernet (WSL)", ipv4Address = "172.30.0.1")
+
+        HostIpv4SelectionPolicy.select(listOf(hyperV, wifi, wslSwitch)) shouldBe HostIpv4Result.Resolved(wifi)
+    }
+
+    @Test
     fun `reports multiple valid candidates as ambiguous in deterministic order`() {
         val eth0 = candidate(interfaceName = "eth0", ipv4Address = "192.168.1.20")
         val wlan0 = candidate(interfaceName = "wlan0", ipv4Address = "192.168.1.21")

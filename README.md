@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="desktop/src/main/resources/androidworld-logo.svg" alt="AndroidWorld logo" width="128">
+</p>
+
 # AndroidWorld
 
 A Compose Multiplatform desktop app (Material 3 Expressive) for working with Android devices and
