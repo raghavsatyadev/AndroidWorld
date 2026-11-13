@@ -17,4 +17,4 @@ dependencyResolutionManagement {
 
 // Backend modules (the core library):
 // :desktop -> :application -> :domain; :adapters-* depend on :domain and are wired in by :desktop.
-include(":domain", ":application", ":adapters-jvm", ":adapters-adb", ":desktop")
+include(":domain", ":application", ":adapters-jvm", ":adapters-adb", ":adapters-emulator", ":desktop")

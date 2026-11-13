@@ -58,7 +58,8 @@ AndroidWorld builds on three projects, used with their authors' permission:
 The device core in turn ports parts of [Oh My Android](https://github.com/ateymoori/oh-my-android)
 (layout snapshot, UI tree text, accessibility traversal, input, foreground app, setting toggles,
 locale, emulator location and MCP tools), MIT. H.264 decoding for screen share uses
-[JCodec](https://github.com/jcodec/jcodec) 0.2.5, BSD 2-Clause.
+[JCodec](https://github.com/jcodec/jcodec) 0.2.5, BSD 2-Clause. The embedded emulator screen uses
+`adapters-emulator/src/main/proto/emulator_controller.proto` from the Android Emulator (AOSP), Apache 2.0.
 
 <details>
 <summary>License texts</summary>

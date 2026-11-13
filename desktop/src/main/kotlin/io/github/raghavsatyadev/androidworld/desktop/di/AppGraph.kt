@@ -303,6 +303,7 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
     val apps by lazy { AppsModule(this) }
     val controls by lazy { DeviceControlsModule(this) }
     val emulators by lazy { EmulatorsModule(this) }
+    val emulatorScreen by lazy { EmulatorScreenModule(this) }
     val commands by lazy { CommandsModule(this) }
     val files by lazy { FilesModule(this) }
     val system by lazy { SystemModule(this) }
