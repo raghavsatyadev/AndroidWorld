@@ -7,6 +7,7 @@ import io.github.raghavsatyadev.androidworld.desktop.ui.commands.CommandsScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.commands.DumpsysScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.commands.TerminalScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.files.FilesScreen
+import io.github.raghavsatyadev.androidworld.desktop.ui.content.ContentScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.controls.DeveloperScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.controls.DisplayScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.controls.LinkLauncherScreen
@@ -44,6 +45,7 @@ fun Destinations(graph: AppGraph, location: Location, darkTheme: Boolean?, onDar
         Section.Properties -> PropertiesScreen(graph.system)
         Section.DeviceSettings -> DeviceSettingsScreen(graph.system)
         Section.Services -> ServicesScreen(graph.system)
+        Section.PersonalData -> ContentScreen(graph.content)
         Section.General -> SettingsScreen(graph, darkTheme, onDarkTheme)
     }
 }
