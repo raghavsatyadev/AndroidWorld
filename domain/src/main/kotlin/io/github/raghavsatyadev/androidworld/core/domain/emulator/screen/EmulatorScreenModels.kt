@@ -116,8 +116,7 @@ object EmulatorHardwareParser {
         val height = config["hw.lcd.height"]?.toIntOrNull() ?: 0
         val density = config["hw.lcd.density"]?.toIntOrNull()
 
-        val isFoldable = config["hw.sensor.hinge"]?.equals("yes", ignoreCase = true) == true ||
-            config["hw.sensor.roll"]?.equals("yes", ignoreCase = true) == true
+        val isFoldable = isOn(config["hw.sensor.hinge"]) || isOn(config["hw.sensor.roll"])
 
         val postures = if (isFoldable) {
             val rawList = config["hw.sensor.posture_list"]
@@ -143,5 +142,10 @@ object EmulatorHardwareParser {
             postures = postures,
             skinName = skinName,
         )
+    }
+
+    private fun isOn(value: String?): Boolean {
+        val trimmed = value?.trim() ?: return false
+        return trimmed.equals("yes", ignoreCase = true) || trimmed.equals("true", ignoreCase = true)
     }
 }

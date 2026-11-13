@@ -62,6 +62,22 @@ class EmulatorHardwareParserTest {
     }
 
     @Test
+    fun `hinge sensor reporting true with posture list parses postures and marks foldable`() {
+        val config = mapOf(
+            "hw.sensor.hinge" to "true",
+            "hw.sensor.posture_list" to "1, 2, 3",
+        )
+        val hardware = EmulatorHardwareParser.parse(config)
+
+        hardware.foldable shouldBe true
+        hardware.postures shouldBe listOf(
+            FoldPosture.Closed,
+            FoldPosture.HalfOpened,
+            FoldPosture.Opened,
+        )
+    }
+
+    @Test
     fun `skin name formatted as resolution is ignored`() {
         val config = mapOf(
             "hw.lcd.width" to "1080",
