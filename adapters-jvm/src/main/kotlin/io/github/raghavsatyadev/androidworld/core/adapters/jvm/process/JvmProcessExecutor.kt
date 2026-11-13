@@ -34,10 +34,11 @@ class JvmProcessExecutor : ProcessExecutor {
 
     override fun execute(request: ProcessRequest): Flow<ProcessEvent> = callbackFlow {
         val builder = ProcessBuilder(
-            buildList {
-                add(request.command.executable)
-                addAll(request.command.arguments)
-            },
+            WindowsArguments.argv(
+                request.command.executable,
+                request.command.arguments,
+                WindowsArguments.isWindowsHost,
+            ),
         )
         request.command.workingDirectory?.let { builder.directory(File(it)) }
         if (request.command.environment.isNotEmpty()) {

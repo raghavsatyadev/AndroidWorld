@@ -26,6 +26,17 @@ enum class SystemKey(val id: String, val command: List<String>) {
     Wakeup("wakeup", listOf("input", "keyevent", "224")),
     Notifications("notifications", listOf("cmd", "statusbar", "expand-notifications")),
     QuickSettings("quick_settings", listOf("cmd", "statusbar", "expand-settings")),
+    DpadCenter("dpad_center", listOf("input", "keyevent", "23")),
+    Menu("menu", listOf("input", "keyevent", "82")),
+    Mute("mute", listOf("input", "keyevent", "164")),
+    PlayPause("play_pause", listOf("input", "keyevent", "85")),
+    MediaNext("media_next", listOf("input", "keyevent", "87")),
+    MediaPrevious("media_previous", listOf("input", "keyevent", "88")),
+    MediaStop("media_stop", listOf("input", "keyevent", "86")),
+    Rewind("rewind", listOf("input", "keyevent", "89")),
+    FastForward("fast_forward", listOf("input", "keyevent", "90")),
+    Space("space", listOf("input", "keyevent", "62")),
+    Settings("settings", listOf("input", "keyevent", "176")),
     ;
 
     companion object {
@@ -56,6 +67,32 @@ object InputCommands {
             serial,
             AdbOperation.Shell(AdbShellCommand.of(ShellToken.Literal("input"), ShellToken.Literal("text"), ShellToken.Value(ShellValue.of(text.replace(" ", "%s"))))),
         )
+    }
+
+    /**
+     * Types arbitrary printable-ASCII text, with '\n' (and "\r\n") allowed as line breaks.
+     * Splitting on '%s' avoids adb turning literal "%s" sequences into spaces.
+     */
+    fun typeText(serial: DeviceSerial, text: String): List<AdbDeviceRequest> {
+        if (text.isEmpty()) return emptyList()
+        val normalized = text.replace("\r\n", "\n")
+        require(normalized.all { it == '\n' || it.code in 0x20..0x7E }) {
+            "Only printable ASCII can be typed (adb input text limit)"
+        }
+        val lines = normalized.split('\n')
+        val requests = mutableListOf<AdbDeviceRequest>()
+        for (i in lines.indices) {
+            if (i > 0) {
+                requests.add(key(serial, SystemKey.Enter))
+            }
+            val line = lines[i]
+            if (line.isNotEmpty()) {
+                for (chunk in InputText.textChunks(line)) {
+                    requests.add(text(serial, chunk))
+                }
+            }
+        }
+        return requests
     }
 
     private fun shell(serial: DeviceSerial, vararg literals: String) =

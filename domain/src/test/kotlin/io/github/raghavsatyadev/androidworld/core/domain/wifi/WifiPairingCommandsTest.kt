@@ -36,4 +36,14 @@ class WifiPairingCommandsTest {
             timeout = 10.seconds,
         )
     }
+
+    @Test
+    fun `mdnsServices builds the exact adb mdns services argv`() {
+        val request = WifiPairingCommands.mdnsServices(timeout = 5.seconds)
+
+        request shouldBe AdbServerRequest(
+            arguments = listOf("mdns", "services"),
+            timeout = 5.seconds,
+        )
+    }
 }

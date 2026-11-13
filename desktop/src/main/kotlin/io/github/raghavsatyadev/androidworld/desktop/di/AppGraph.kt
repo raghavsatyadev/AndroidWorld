@@ -308,6 +308,7 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
     val system by lazy { SystemModule(this) }
     val content by lazy { ContentModule(this) }
     val inspector by lazy { InspectorModule(this) }
+    val remote by lazy { RemoteModule(this) }
 
     /** Saves tool paths / capture dir and drops cached tool lookups that depend on them. */
     fun saveSettings(change: (SettingsState) -> SettingsState) {
