@@ -19,6 +19,9 @@ import io.github.raghavsatyadev.androidworld.desktop.ui.mirror.MirrorScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.nav.Location
 import io.github.raghavsatyadev.androidworld.desktop.ui.nav.Section
 import io.github.raghavsatyadev.androidworld.desktop.ui.settings.SettingsScreen
+import io.github.raghavsatyadev.androidworld.desktop.ui.system.DeviceSettingsScreen
+import io.github.raghavsatyadev.androidworld.desktop.ui.system.PropertiesScreen
+import io.github.raghavsatyadev.androidworld.desktop.ui.system.ServicesScreen
 
 /** Maps a [Location] to its screen. The only place that knows every screen. */
 @Composable
@@ -38,6 +41,9 @@ fun Destinations(graph: AppGraph, location: Location, darkTheme: Boolean?, onDar
         Section.Commands -> CommandsScreen(graph.commands)
         Section.Dumpsys -> DumpsysScreen(graph.commands)
         Section.Terminal -> TerminalScreen(graph.commands)
+        Section.Properties -> PropertiesScreen(graph.system)
+        Section.DeviceSettings -> DeviceSettingsScreen(graph.system)
+        Section.Services -> ServicesScreen(graph.system)
         Section.General -> SettingsScreen(graph, darkTheme, onDarkTheme)
     }
 }
