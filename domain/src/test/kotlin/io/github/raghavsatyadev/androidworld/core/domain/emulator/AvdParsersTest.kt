@@ -31,6 +31,18 @@ class AvdParsersTest {
     }
 
     @Test
+    fun `a listing with one AVD row followed by a jvm warning line yields exactly one AVD`() {
+        val text = listOf(
+            "AVD ID      AVD Name         API Level  Status   Serial",
+            "Pixel_9     My Pixel 9 Pro   android-35 Online   emulator-5556",
+            "OpenJDK 64-Bit Server VM warning: The UseAllWindowsProcessorGroups flag is not supported on this Windows version and will be ignored.",
+        ).joinToString("\r\n")
+        AvdListParser.parse(text) shouldBe listOf(
+            Avd("Pixel_9", "My Pixel 9 Pro", "android-35", AvdStatus.Online, "emulator-5556"),
+        )
+    }
+
+    @Test
     fun `output without the table header yields nothing`() {
         AvdListParser.parse("No AVDs found.").shouldBeEmpty()
     }

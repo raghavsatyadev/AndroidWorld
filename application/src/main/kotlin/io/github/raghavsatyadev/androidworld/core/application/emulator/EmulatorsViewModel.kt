@@ -1,7 +1,10 @@
 package io.github.raghavsatyadev.androidworld.core.application.emulator
 
+import io.github.raghavsatyadev.androidworld.core.application.sdk.AvdNames
+import io.github.raghavsatyadev.androidworld.core.application.sdk.SystemImagesCli
 import io.github.raghavsatyadev.androidworld.core.domain.dispatch.DispatcherProvider
 import io.github.raghavsatyadev.androidworld.core.domain.emulator.Avd
+import io.github.raghavsatyadev.androidworld.core.domain.sdk.SystemImage
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
@@ -54,7 +57,7 @@ sealed interface EmulatorsIntent {
 
     data class Remove(val avd: Avd) : EmulatorsIntent
 
-    data class Create(val profile: String) : EmulatorsIntent
+    data class Create(val profile: String, val image: SystemImage? = null) : EmulatorsIntent
 
     data object DismissMessage : EmulatorsIntent
 }
@@ -70,6 +73,7 @@ class EmulatorsViewModel(
     private val cli: EmulatorCli,
     private val confirmRemoval: AvdRemovalConfirmation,
     private val pollInterval: Duration = 5.seconds,
+    private val images: SystemImagesCli? = null,
 ) {
     private val _state = MutableStateFlow(EmulatorsState())
     val state: StateFlow<EmulatorsState> = _state.asStateFlow()
@@ -91,7 +95,7 @@ class EmulatorsViewModel(
                 cli.stop(intent.avd.serial ?: intent.avd.id).report(ok = "${intent.avd.name} stopped.")
             }
             is EmulatorsIntent.Remove -> remove(intent.avd)
-            is EmulatorsIntent.Create -> create(intent.profile)
+            is EmulatorsIntent.Create -> create(intent.profile, intent.image)
             EmulatorsIntent.DismissMessage -> _state.update { it.copy(message = null) }
         }
     }
@@ -133,12 +137,18 @@ class EmulatorsViewModel(
         }
     }
 
-    private fun create(profile: String) {
+    private fun create(profile: String, image: SystemImage? = null) {
         if (_state.value.creating != null) return
         _state.update { it.copy(creating = profile, message = null) }
         scope.launch(dispatchers.io) {
             try {
-                val message = cli.create(profile).report(ok = "Created a ${profile.replace('_', ' ')} emulator.")
+                val message = if (image != null && images != null) {
+                    val name = AvdNames.unique(profile, image, _state.value.avds.map { it.id })
+                    images.createAvd(name, image.packageId, AvdNames.deviceFor(profile))
+                        .report(ok = "Created $name from ${image.apiLabel} ${image.tagLabel}.")
+                } else {
+                    cli.create(profile).report(ok = "Created a ${profile.replace('_', ' ')} emulator.")
+                }
                 _state.update { it.copy(message = message) }
                 refresh()
             } finally {
