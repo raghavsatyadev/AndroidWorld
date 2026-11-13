@@ -41,7 +41,7 @@ Legend: **R** reuse core code · **P** port logic to Kotlin · **CLI** wrap `and
 | Contacts / SMS / call log / calendar viewers | P (content providers) | 3 |
 | Command browser (dumpsys, input, pm, settings, setprop…) (done) | P (data + runner) | 2 |
 | Built-in adb shell terminal (done) | P | 3 |
-| File browser push/pull | P | 3 |
+| File browser push/pull (done) | P | 3 |
 | System properties / services / settings editor | P | 3 |
 | Settings: tool paths, capture dir, MCP access level | R + N UI | 1 |
 
