@@ -5,40 +5,42 @@ import io.github.raghavsatyadev.androidworld.core.application.sdk.PartialDownloa
 import io.github.raghavsatyadev.androidworld.core.domain.sdk.SystemImage
 import java.io.File
 
-/**
- * Tracks and cleans up temporary download files created by the `android` CLI.
- */
-internal object TempDownloads : PartialDownloads {
-    private val tmpFileRegex =
-        Regex("""^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.tmp$""", RegexOption.IGNORE_CASE)
-
+/** Cleans up what the android CLI leaves in `<sdk>/.sdk/arch` and `<sdk>/.sdk/unzips` when an install is cancelled. */
+internal class SdkDownloads(private val sdkRoot: () -> String?) : PartialDownloads {
     override fun snapshot(): Set<String> = runCatching {
-        val tmpDir = File(System.getProperty("java.io.tmpdir"))
-        tmpDir.listFiles()
-            ?.filter { it.isFile && tmpFileRegex.matches(it.name) }
-            ?.map { it.name }
-            ?.toSet()
-            .orEmpty()
+        val root = sdkRoot()?.let(::File) ?: return@runCatching emptySet()
+        cacheFolders(root)
+            .flatMap { (prefix, folder) ->
+                folder.listFiles()?.map { "$prefix/${it.name}" }.orEmpty()
+            }
+            .toSet()
     }.getOrDefault(emptySet())
 
     override fun sweep(before: Set<String>) {
         runCatching {
-            val tmpDir = File(System.getProperty("java.io.tmpdir"))
-            val candidates = tmpDir.listFiles()
-                ?.filter { it.isFile && tmpFileRegex.matches(it.name) && it.name !in before }
-                .orEmpty()
-            for (file in candidates) {
-                deleteWithRetry(file)
+            val root = sdkRoot()?.let(::File) ?: return@runCatching
+            for ((prefix, folder) in cacheFolders(root)) {
+                val entries = folder.listFiles() ?: continue
+                for (entry in entries) {
+                    if ("$prefix/${entry.name}" !in before) {
+                        deleteWithRetry(entry)
+                    }
+                }
             }
         }
     }
 
-    private fun deleteWithRetry(file: File) {
-        if (!file.exists()) return
-        if (file.delete()) return
+    private fun cacheFolders(root: File): List<Pair<String, File>> = listOf(
+        "arch" to File(root, ".sdk/arch"),
+        "unzips" to File(root, ".sdk/unzips"),
+    )
+
+    private fun deleteWithRetry(entry: File) {
+        if (!entry.exists()) return
+        if (entry.deleteRecursively()) return
         repeat(5) {
-            runCatching { Thread.sleep(500) }
-            if (file.delete() || !file.exists()) return
+            runCatching { Thread.sleep(400) }
+            if (entry.deleteRecursively() || !entry.exists()) return
         }
     }
 }
