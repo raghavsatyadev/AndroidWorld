@@ -1,15 +1,13 @@
 param([string]$out)
+# Saves a screenshot of the AndroidWorld window (even when covered) to $out.
 Add-Type -AssemblyName System.Drawing
 Add-Type @"
 using System; using System.Runtime.InteropServices;
-public class W { [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
-[DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
-[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
-public struct RECT { public int L,T,R,B; } }
+public class W { [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f); }
 "@
-[W]::SetProcessDPIAware() | Out-Null
-$p = Get-Process java -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq 'AndroidWorld' } | Select-Object -First 1
-if (-not $p) { "no window"; exit 1 }
-$h = $p.MainWindowHandle; $r = New-Object W+RECT; [W]::GetWindowRect($h, [ref]$r) | Out-Null
+. "$PSScriptRoot\aw-window.ps1"
+$h = Get-AwWindow -NoActivate
+if ($h -eq [IntPtr]::Zero) { "no window"; exit 1 }
+$r = New-Object AwWin+RECT; [AwWin]::GetWindowRect($h, [ref]$r) | Out-Null
 $bmp = New-Object System.Drawing.Bitmap ($r.R-$r.L), ($r.B-$r.T); $g = [System.Drawing.Graphics]::FromImage($bmp)
-$dc = $g.GetHdc(); [W]::PrintWindow($h, $dc, 2) | Out-Null; $g.ReleaseHdc($dc); $bmp.Save($out); "saved $($p.Id) $($r.R-$r.L)x$($r.B-$r.T)"
+$dc = $g.GetHdc(); [W]::PrintWindow($h, $dc, 2) | Out-Null; $g.ReleaseHdc($dc); $bmp.Save($out); "saved $($r.R-$r.L)x$($r.B-$r.T)"
