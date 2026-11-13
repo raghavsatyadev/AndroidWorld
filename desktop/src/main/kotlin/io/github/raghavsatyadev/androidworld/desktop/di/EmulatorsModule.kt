@@ -6,11 +6,14 @@ import io.github.raghavsatyadev.androidworld.core.application.device.SelectedDev
 import io.github.raghavsatyadev.androidworld.core.application.emulator.AvdConfigSource
 import io.github.raghavsatyadev.androidworld.core.application.emulator.EmulatorCli
 import io.github.raghavsatyadev.androidworld.core.application.emulator.EmulatorsViewModel
+import io.github.raghavsatyadev.androidworld.core.application.sdk.SystemImagesCli
+import io.github.raghavsatyadev.androidworld.core.application.sdk.SystemImagesViewModel
 import io.github.raghavsatyadev.androidworld.core.domain.adb.DeviceSerial
 import io.github.raghavsatyadev.androidworld.core.domain.emulator.Avd
 import io.github.raghavsatyadev.androidworld.core.domain.emulator.AvdConfig
 import io.github.raghavsatyadev.androidworld.core.domain.emulator.AvdConfigParser
 import io.github.raghavsatyadev.androidworld.core.domain.device.SelectedDeviceState
+import io.github.raghavsatyadev.androidworld.core.domain.sdk.SystemImages
 import java.io.File
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,13 @@ import kotlinx.coroutines.flow.onEach
 class EmulatorsModule(private val core: AppGraph) {
     private val scope = core.childScope()
 
+    private val imagesCli = SystemImagesCli(
+        core.processExecutor,
+        executable = { AndroidCliPath.resolved },
+        sdkRoot = { core.sdk.root()?.toString() },
+        avdManager = { core.sdk.tool("cmdline-tools", "avdmanager")?.toString() },
+    )
+
     val emulators = EmulatorsViewModel(
         scope = core.childScope(),
         dispatchers = core.dispatchers,
@@ -41,6 +51,30 @@ class EmulatorsModule(private val core: AppGraph) {
                 ),
             )
         },
+        images = imagesCli,
+    )
+
+    val systemImages = SystemImagesViewModel(
+        scope = core.childScope(),
+        dispatchers = core.dispatchers,
+        cli = imagesCli,
+        downloads = TempDownloads,
+        users = AvdImageUsers,
+        confirmRemoval = { image, usedBy ->
+            val warning = if (usedBy.isNotEmpty()) {
+                " These virtual devices use it and won't start until it is installed again: ${usedBy.joinToString()}."
+            } else {
+                ""
+            }
+            core.confirmations.ask(
+                ConfirmRequest(
+                    "Delete ${image.apiLabel} ${image.tagLabel}?",
+                    "The ${image.abi} system image will be removed from the Android SDK.$warning",
+                    "Delete",
+                ),
+            )
+        },
+        hostAbis = SystemImages.hostAbis(System.getProperty("os.arch").orEmpty()),
     )
 
     init {

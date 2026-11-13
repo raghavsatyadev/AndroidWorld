@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +48,7 @@ import io.github.raghavsatyadev.androidworld.core.application.emulator.EmulatorM
 import io.github.raghavsatyadev.androidworld.core.application.emulator.EmulatorsIntent
 import io.github.raghavsatyadev.androidworld.core.application.emulator.EmulatorsState
 import io.github.raghavsatyadev.androidworld.core.domain.emulator.FormFactor
+import io.github.raghavsatyadev.androidworld.core.domain.sdk.SystemImage
 
 /** Every AVD on this computer: start, stop, use, create and delete them through the `android` CLI. */
 @Composable
@@ -54,6 +56,7 @@ fun EmulatorsScreen(module: EmulatorsModule) {
     val vm = module.emulators
     val state by vm.state.collectAsState()
     val selected by module.selectedSerial.collectAsState()
+    val systemImagesState by module.systemImages.state.collectAsState()
     DisposableEffect(vm) {
         vm.handle(EmulatorsIntent.SetVisible(true))
         onDispose { vm.handle(EmulatorsIntent.SetVisible(false)) }
@@ -78,7 +81,8 @@ fun EmulatorsScreen(module: EmulatorsModule) {
         ) {
             AvdList(state, selected, vm::handle, module)
         }
-        CreateCard(state, vm::handle)
+        CreateCard(state, systemImagesState.installed, vm::handle)
+        SystemImagesCard(module.systemImages)
     }
 }
 
@@ -112,11 +116,13 @@ private fun AvdList(state: EmulatorsState, selected: String?, onIntent: (Emulato
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CreateCard(state: EmulatorsState, onIntent: (EmulatorsIntent) -> Unit) {
+private fun CreateCard(state: EmulatorsState, installed: List<SystemImage>, onIntent: (EmulatorsIntent) -> Unit) {
     var profile by rememberSaveable { mutableStateOf<String?>(null) }
+    var image by remember { mutableStateOf<SystemImage?>(null) }
+    val selectedImage = image?.takeIf { it in installed }
     val creating = state.creating
     SectionCard("New virtual device") {
-        Caption("Pick a device shape. The first one of a kind may download a system image, which can take a while.")
+        Caption("Pick a device shape and, optionally, an installed system image. Without one, the android CLI picks an image and may download it.")
         if (state.profiles.isEmpty()) {
             Caption("Reading the device shapes the android CLI offers…")
         } else {
@@ -132,8 +138,27 @@ private fun CreateCard(state: EmulatorsState, onIntent: (EmulatorsIntent) -> Uni
                 }
             }
         }
+        if (installed.isNotEmpty()) {
+            Caption("System image")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = selectedImage == null,
+                    onClick = { image = null },
+                    label = { Text("Pick for me") },
+                    enabled = creating == null,
+                )
+                installed.forEach { item ->
+                    FilterChip(
+                        selected = selectedImage == item,
+                        onClick = { image = item },
+                        label = { Text("${item.apiLabel} · ${item.tagLabel} · ${item.abi}") },
+                        enabled = creating == null,
+                    )
+                }
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { profile?.let { onIntent(EmulatorsIntent.Create(it)) } }, enabled = profile != null && creating == null) {
+            Button(onClick = { profile?.let { onIntent(EmulatorsIntent.Create(it, selectedImage)) } }, enabled = profile != null && creating == null) {
                 Icon(Icons.Filled.Add, null, Modifier.padding(end = 8.dp))
                 Text("Create")
             }
