@@ -4,7 +4,13 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** A problem the audit reports for a screen-reader stop. */
-enum class AccessibilityIssueKind { NoLabel, NotAccessibilityFriendly, SmallTouchTarget }
+enum class AccessibilityIssueKind {
+    NoLabel,
+    NotAccessibilityFriendly,
+    SmallTouchTarget,
+    DuplicateLabel,
+    ImageWithoutDescription,
+}
 
 data class AccessibilityIssue(val kind: AccessibilityIssueKind, val message: String)
 
@@ -15,6 +21,7 @@ data class AccessibilityStop(
     val role: String,
     val spoken: String,
     val issues: List<AccessibilityIssue>,
+    val label: String = "",
 )
 
 /**
@@ -70,7 +77,7 @@ object AccessibilityAudit {
         val stops = mutableListOf<AccessibilityStop>()
         val images = mutableListOf<UiNode>()
         visit(hierarchy.root, hierarchy, hierarchy.root.bounds, stops, images)
-        return AccessibilityReport(stops, images, hierarchy)
+        return AccessibilityReport(DuplicateLabels.mark(stops), images, hierarchy)
     }
 
     fun items(hierarchy: UiHierarchy): List<AccessibilityStop> = audit(hierarchy).stops
@@ -141,7 +148,7 @@ object AccessibilityAudit {
             if (flags.naf) add(AccessibilityIssue(AccessibilityIssueKind.NotAccessibilityFriendly, "NAF: actionable without accessible text"))
             if (flags.clickable) smallTarget(node, hierarchy, viewport)?.let(::add)
         }
-        return AccessibilityStop(order, node, role, parts.joinToString(", "), issues)
+        return AccessibilityStop(order, node, role, parts.joinToString(", "), issues, mergedText)
     }
 
     /** uiautomator clips bounds to the visible part, so a row cut by its list's edge only looks small. */

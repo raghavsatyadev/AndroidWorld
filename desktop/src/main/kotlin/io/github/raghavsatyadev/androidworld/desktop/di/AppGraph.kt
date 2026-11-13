@@ -217,7 +217,7 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
     internal val uninstall = UninstallUseCase(adbTransport)
     internal val locale = DeviceLocaleUseCase(LocaleHelper(adbTransport, helperDeployment), adapters.originalLocales)
     internal val location = EmulatorLocationUseCase(adbTransport)
-    private val currentAppUseCase = CurrentAppUseCase(adbTransport, appInfo = appInfoHelper)
+    internal val currentAppUseCase = CurrentAppUseCase(adbTransport, appInfo = appInfoHelper)
 
     val currentApp = CurrentAppViewModel(
         scope = childScope(),
@@ -260,7 +260,7 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
         selectPackage = logcatPackageSelection::select,
     )
 
-    private fun deviceLabel(serial: io.github.raghavsatyadev.androidworld.core.domain.adb.DeviceSerial): String =
+    internal fun deviceLabel(serial: io.github.raghavsatyadev.androidworld.core.domain.adb.DeviceSerial): String =
         deviceRepositoryImpl.devices.value.firstOrNull { it.serial == serial }?.displayName ?: serial.value
 
     val mcp = McpController(
@@ -304,6 +304,7 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
     val controls by lazy { DeviceControlsModule(this) }
     val emulators by lazy { EmulatorsModule(this) }
     val commands by lazy { CommandsModule(this) }
+    val inspector by lazy { InspectorModule(this) }
 
     /** Saves tool paths / capture dir and drops cached tool lookups that depend on them. */
     fun saveSettings(change: (SettingsState) -> SettingsState) {
