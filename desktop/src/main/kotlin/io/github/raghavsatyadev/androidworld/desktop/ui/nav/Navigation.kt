@@ -3,6 +3,7 @@ package io.github.raghavsatyadev.androidworld.desktop.ui.nav
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.ScreenShare
@@ -30,6 +31,7 @@ enum class Section(val label: String) {
     Commands("Commands"),
     Dumpsys("dumpsys"),
     Terminal("Shell"),
+    PersonalData("Personal data"),
     General("General"),
 }
 
@@ -45,6 +47,7 @@ enum class Area(val label: String, val icon: ImageVector, val sections: List<Sec
     Logcat("Logcat", Icons.AutoMirrored.Filled.Notes, listOf(Section.Logcat)),
     Emulators("Emulators", Icons.Filled.Devices, listOf(Section.Avds)),
     Commands("Commands", Icons.Filled.Terminal, listOf(Section.Commands, Section.Terminal, Section.Dumpsys)),
+    PersonalData("Data", Icons.Filled.Contacts, listOf(Section.PersonalData)),
     Settings("Settings", Icons.Filled.Settings, listOf(Section.General)),
 }
 
