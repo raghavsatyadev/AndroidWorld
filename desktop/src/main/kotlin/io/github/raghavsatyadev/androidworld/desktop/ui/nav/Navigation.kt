@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.ScreenShare
 import androidx.compose.material.icons.filled.Settings
@@ -30,6 +31,9 @@ enum class Section(val label: String) {
     Commands("Commands"),
     Dumpsys("dumpsys"),
     Terminal("Shell"),
+    Properties("Properties"),
+    DeviceSettings("Settings"),
+    Services("Services"),
     General("General"),
 }
 
@@ -45,6 +49,7 @@ enum class Area(val label: String, val icon: ImageVector, val sections: List<Sec
     Logcat("Logcat", Icons.AutoMirrored.Filled.Notes, listOf(Section.Logcat)),
     Emulators("Emulators", Icons.Filled.Devices, listOf(Section.Avds)),
     Commands("Commands", Icons.Filled.Terminal, listOf(Section.Commands, Section.Terminal, Section.Dumpsys)),
+    System("System", Icons.Filled.Memory, listOf(Section.Properties, Section.DeviceSettings, Section.Services)),
     Settings("Settings", Icons.Filled.Settings, listOf(Section.General)),
 }
 
