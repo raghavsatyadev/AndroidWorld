@@ -18,4 +18,7 @@ object WifiPairingCommands {
 
     fun connect(endpoint: WifiEndpoint, timeout: Duration): AdbServerRequest =
         AdbServerRequest(arguments = listOf("connect", endpoint.render()), timeout = timeout)
+
+    fun mdnsServices(timeout: Duration): AdbServerRequest =
+        AdbServerRequest(arguments = listOf("mdns", "services"), timeout = timeout)
 }

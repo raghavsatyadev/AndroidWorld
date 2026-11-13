@@ -63,6 +63,8 @@ fun DeviceScreen(graph: AppGraph) {
     ) {
         FactsCard(graph, facts)
         CurrentAppCard(graph)
+        RemoteCard(graph)
+        KeyboardCard(graph)
         CaptureCard(graph)
     }
 }

@@ -16,7 +16,7 @@ import kotlinx.coroutines.withContext
 class JvmInteractiveProcessLauncher : InteractiveProcessLauncher {
 
     override fun launch(command: ProcessCommand): InteractiveProcess {
-        val builder = ProcessBuilder(listOf(command.executable) + command.arguments).redirectErrorStream(true)
+        val builder = ProcessBuilder(WindowsArguments.argv(command.executable, command.arguments, WindowsArguments.isWindowsHost)).redirectErrorStream(true)
         command.workingDirectory?.let { builder.directory(File(it)) }
         if (command.environment.isNotEmpty()) builder.environment().putAll(command.environment)
         return JvmInteractiveProcess(builder.start())

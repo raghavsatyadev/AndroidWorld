@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.raghavsatyadev.androidworld.desktop.di.AppGraph
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.ConfirmDialogHost
+import io.github.raghavsatyadev.androidworld.desktop.ui.pairing.WifiPairingDialogHost
 import io.github.raghavsatyadev.androidworld.desktop.ui.motion.fadeThrough
 import io.github.raghavsatyadev.androidworld.desktop.ui.motion.reveal
 import io.github.raghavsatyadev.androidworld.desktop.ui.motion.conceal
@@ -98,6 +99,7 @@ fun AppShell(graph: AppGraph, darkTheme: Boolean?, onDarkTheme: (Boolean?) -> Un
         }
     }
     ConfirmDialogHost(graph.confirmations)
+    WifiPairingDialogHost(graph)
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

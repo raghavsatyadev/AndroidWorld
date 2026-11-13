@@ -304,6 +304,7 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
     val controls by lazy { DeviceControlsModule(this) }
     val emulators by lazy { EmulatorsModule(this) }
     val commands by lazy { CommandsModule(this) }
+    val remote by lazy { RemoteModule(this) }
 
     /** Saves tool paths / capture dir and drops cached tool lookups that depend on them. */
     fun saveSettings(change: (SettingsState) -> SettingsState) {
