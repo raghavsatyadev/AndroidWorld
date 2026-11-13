@@ -14,6 +14,8 @@ import io.github.raghavsatyadev.androidworld.core.domain.device.Device
 import io.github.raghavsatyadev.androidworld.core.domain.device.DeviceConnectionState
 import io.github.raghavsatyadev.androidworld.core.domain.device.SelectedDeviceState
 import io.github.raghavsatyadev.androidworld.core.domain.dispatch.DispatcherProvider
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -91,5 +93,98 @@ class LayoutInspectorViewModelTest {
         vm.recapture() // no device: nothing happens
         scope.advanceUntilIdle()
         vm.state.value.capturing shouldBe false
+    }
+
+    @Test
+    fun `node selection, ancestor expansion, and toggle interaction after capture`() {
+        vm.recapture()
+        scope.advanceUntilIdle()
+
+        vm.state.value.capture!!.imageScale shouldBe 1.0
+        vm.selectAt(50.0, 50.0)
+        vm.state.value.selectedNodeId shouldBe 1
+
+        vm.select(1)
+        vm.state.value.expanded shouldBe setOf(0)
+        vm.state.value.properties shouldContain ("Text" to "Pay")
+
+        vm.toggle(0)
+        vm.state.value.rows.size shouldBe 1
+
+        vm.recapture()
+        scope.advanceUntilIdle()
+        vm.state.value.selectedNodeId shouldBe null
+    }
+
+    @Test
+    fun `onShown captures when nothing is captured yet`() {
+        val freshVm = LayoutInspectorViewModel(
+            scope,
+            D(StandardTestDispatcher(scope.testScheduler)),
+            CaptureLayoutUseCase(transport),
+            CurrentAppUseCase(transport),
+            selected,
+            { "Pixel 9" },
+            now = { 42L },
+        )
+        freshVm.state.value.capture shouldBe null
+
+        freshVm.onShown()
+        scope.advanceUntilIdle()
+
+        freshVm.state.value.capture.shouldNotBeNull()
+        freshVm.state.value.capture!!.deviceName shouldBe "Pixel 9"
+    }
+
+    @Test
+    fun `image scale scales coordinates when image dimensions differ from screen bounds`() {
+        val pngHeader = ByteArray(24).apply {
+            byteArrayOf(
+                0x89.toByte(), 0x50.toByte(), 0x4E.toByte(), 0x47.toByte(),
+                0x0D.toByte(), 0x0A.toByte(), 0x1A.toByte(), 0x0A.toByte(),
+            ).copyInto(this, 0)
+            byteArrayOf(0, 0, 0, 13).copyInto(this, 8)
+            byteArrayOf(0x49, 0x48, 0x44, 0x52).copyInto(this, 12)
+            this[16] = 0
+            this[17] = 0
+            this[18] = 2
+            this[19] = 0x1C.toByte()
+            this[20] = 0
+            this[21] = 0
+            this[22] = 4
+            this[23] = 0xB0.toByte()
+        }
+        val scaledTransport = FakeAdbTransport(
+            textScript = { request ->
+                val line = ((request as AdbDeviceRequest).operation as AdbOperation.Shell).command.render()
+                AdbTextResult(
+                    AdbOutcome.Completed(0),
+                    when {
+                        line == "wm density" -> "Physical density: 420"
+                        line.startsWith("uiautomator") -> dump
+                        line.startsWith("dumpsys activity activities") -> "  topResumedActivity=ActivityRecord{1 u0 com.acme.shop/.checkout.CheckoutActivity t1}\n--adbtoolbox-window--\n"
+                        else -> ""
+                    },
+                    "",
+                )
+            },
+            binaryScript = { AdbBinaryScript(listOf(pngHeader), AdbOutcome.Completed(0)) },
+        )
+        val scaledVm = LayoutInspectorViewModel(
+            scope,
+            D(StandardTestDispatcher(scope.testScheduler)),
+            CaptureLayoutUseCase(scaledTransport),
+            CurrentAppUseCase(scaledTransport),
+            selected,
+            { "Pixel 9" },
+            now = { 42L },
+        )
+        scaledVm.recapture()
+        scope.advanceUntilIdle()
+
+        val capture = scaledVm.state.value.capture!!
+        capture.imageScale shouldBe 0.5
+        scaledVm.selectAt(25.0, 25.0)
+        scaledVm.state.value.selectedNodeId shouldBe 1
     }
 }

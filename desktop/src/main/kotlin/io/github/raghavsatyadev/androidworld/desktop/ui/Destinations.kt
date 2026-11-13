@@ -15,6 +15,7 @@ import io.github.raghavsatyadev.androidworld.desktop.ui.controls.NetworkScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.controls.RegionScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.device.DeviceScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.emulators.EmulatorsScreen
+import io.github.raghavsatyadev.androidworld.desktop.ui.inspector.LayoutInspectorScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.logcat.LogcatScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.mirror.MirrorScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.nav.Location
@@ -36,6 +37,7 @@ fun Destinations(graph: AppGraph, location: Location, darkTheme: Boolean?, onDar
         Section.Network -> NetworkScreen(graph.controls)
         Section.Links -> LinkLauncherScreen(graph.controls)
         Section.Share -> MirrorScreen(graph)
+        Section.Inspector -> LayoutInspectorScreen(graph.inspector)
         Section.Logcat -> LogcatScreen(graph.logcat)
         Section.Files -> FilesScreen(graph.files)
         Section.Avds -> EmulatorsScreen(graph.emulators)
