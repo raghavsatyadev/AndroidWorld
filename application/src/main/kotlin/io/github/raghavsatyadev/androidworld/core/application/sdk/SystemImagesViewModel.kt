@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Snapshot/sweep of partial downloads in the temp folder; the desktop implements it with java.io.File. */
+/** Snapshot/sweep of what an interrupted install leaves in the SDK's download cache; the desktop implements it with java.io.File. */
 interface PartialDownloads {
     fun snapshot(): Set<String>
 
@@ -150,7 +150,10 @@ class SystemImagesViewModel(
                 withContext(NonCancellable) {
                     downloads.sweep(before)
                     _state.update {
-                        it.copy(message = ImageMessage("Download cancelled; partial files were removed.", isError = false))
+                        it.copy(
+                            task = null,
+                            message = ImageMessage("Download cancelled; partial files were removed.", isError = false),
+                        )
                     }
                     val list = cli.list()
                     if (list != null) {

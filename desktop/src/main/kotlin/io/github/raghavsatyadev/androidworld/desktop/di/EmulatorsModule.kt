@@ -58,7 +58,7 @@ class EmulatorsModule(private val core: AppGraph) {
         scope = core.childScope(),
         dispatchers = core.dispatchers,
         cli = imagesCli,
-        downloads = TempDownloads,
+        downloads = SdkDownloads { core.sdk.root()?.toString() },
         users = AvdImageUsers,
         confirmRemoval = { image, usedBy ->
             val warning = if (usedBy.isNotEmpty()) {
