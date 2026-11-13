@@ -14,6 +14,7 @@ import io.github.raghavsatyadev.androidworld.desktop.ui.controls.RegionScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.device.DeviceScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.emulators.EmulatorsScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.logcat.LogcatScreen
+import io.github.raghavsatyadev.androidworld.desktop.ui.emulator.EmulatorScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.mirror.MirrorScreen
 import io.github.raghavsatyadev.androidworld.desktop.ui.nav.Location
 import io.github.raghavsatyadev.androidworld.desktop.ui.nav.Section
@@ -31,6 +32,7 @@ fun Destinations(graph: AppGraph, location: Location, darkTheme: Boolean?, onDar
         Section.Network -> NetworkScreen(graph.controls)
         Section.Links -> LinkLauncherScreen(graph.controls)
         Section.Share -> MirrorScreen(graph)
+        Section.Emulator -> EmulatorScreen(graph)
         Section.Logcat -> LogcatScreen(graph.logcat)
         Section.Avds -> EmulatorsScreen(graph.emulators)
         Section.Commands -> CommandsScreen(graph.commands)

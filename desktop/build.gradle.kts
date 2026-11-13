@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":application"))
     implementation(project(":adapters-jvm"))
     implementation(project(":adapters-adb"))
+    implementation(project(":adapters-emulator"))
     implementation(compose.desktop.currentOs)
     implementation(libs.compose.material3)
     implementation(libs.compose.icons.extended)
