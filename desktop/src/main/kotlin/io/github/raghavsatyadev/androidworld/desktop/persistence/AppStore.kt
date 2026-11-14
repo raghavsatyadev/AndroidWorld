@@ -30,6 +30,10 @@ data class StoredState(
     val pinnedPackages: List<String> = emptyList(),
     val originalLocales: Map<String, String> = emptyMap(),
     val darkTheme: Boolean? = null,
+    /** Screen share stream settings (scrcpy max_size, max_fps, video_bit_rate). */
+    val shareMaxSize: Int = 1280,
+    val shareMaxFps: Int = 30,
+    val shareBitRate: Int = 8_000_000,
     /** Most recent first, each `host:port` as [io.github.raghavsatyadev.androidworld.core.domain.network.ProxyEndpoint.render] writes it. */
     val recentProxies: List<String> = emptyList(),
     val deepLinks: StoredDeepLinks = StoredDeepLinks(),

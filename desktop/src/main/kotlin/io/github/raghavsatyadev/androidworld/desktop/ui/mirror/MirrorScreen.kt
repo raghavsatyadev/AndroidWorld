@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,14 +44,24 @@ import io.github.raghavsatyadev.androidworld.desktop.mirror.AndroidKey
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpyMirror
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpySetup
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpyUpdateCheck
+import io.github.raghavsatyadev.androidworld.desktop.mirror.ShareOptions
 import io.github.raghavsatyadev.androidworld.desktop.mirror.TouchAction
+import io.github.raghavsatyadev.androidworld.desktop.mirror.encodePng
+import io.github.raghavsatyadev.androidworld.desktop.mirror.saveSnapshot
+import io.github.raghavsatyadev.androidworld.desktop.persistence.StoredState
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.EmptyState
+import io.github.raghavsatyadev.androidworld.core.adapters.jvm.capture.DesktopRevealInFileManager
+import io.github.raghavsatyadev.androidworld.core.adapters.jvm.capture.SettingsBackedCaptureDestination
+import io.github.raghavsatyadev.androidworld.core.domain.capture.TimestampFileNamePolicy
+import io.github.raghavsatyadev.androidworld.core.domain.feedback.FeedbackAction
+import io.github.raghavsatyadev.androidworld.core.domain.feedback.FeedbackSeverity
 import io.github.raghavsatyadev.androidworld.core.domain.device.SelectedDeviceState
 import io.github.raghavsatyadev.androidworld.core.domain.discovery.DiscoveryOutcome
 import io.github.raghavsatyadev.androidworld.core.domain.discovery.ToolId
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Live screen share of the selected device through scrcpy's server, with touch and nav keys. */
@@ -74,13 +85,16 @@ fun MirrorScreen(graph: AppGraph) {
             scrcpy?.let { ScrcpyUpdateCheck.warning(it.version.raw) }
         }
     }
+    var options by remember { mutableStateOf(graph.store.state.shareOptions()) }
+    val scope = rememberCoroutineScope()
 
     if (running) {
-        LaunchedEffect(serial) {
+        // A new options value cancels this effect and starts a fresh stream with the new settings.
+        LaunchedEffect(serial, options) {
             error = null
             try {
                 val setup = resolveSetup(graph) ?: error("scrcpy was not found. Install scrcpy 3 or newer and put it on PATH.")
-                mirror.frames(setup, serial).flowOn(Dispatchers.IO).collect { frame = it }
+                mirror.frames(setup, serial, options).flowOn(Dispatchers.IO).collect { frame = it }
                 error = "The device stopped sharing its screen."
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -112,6 +126,17 @@ fun MirrorScreen(graph: AppGraph) {
                 Text(it, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodyMedium)
             }
         }
+        ShareControls(
+            running = running,
+            canSnapshot = frame != null,
+            options = options,
+            onOptions = { picked ->
+                options = picked
+                graph.store.update { it.copy(shareMaxSize = picked.maxSize, shareMaxFps = picked.maxFps, shareBitRate = picked.bitRate) }
+            },
+            onSnapshot = { frame?.let { image -> scope.launch { saveFrame(graph, image) } } },
+            onRotate = mirror::rotate,
+        )
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             val image = frame
             when {
@@ -175,6 +200,25 @@ private fun clampToFrame(p: Offset, box: IntSize, image: ImageBitmap): Pair<Int,
     val x = ((p.x - (box.width - image.width * scale) / 2) / scale).toInt().coerceIn(0, image.width - 1)
     val y = ((p.y - (box.height - image.height * scale) / 2) / scale).toInt().coerceIn(0, image.height - 1)
     return x to y
+}
+
+private fun StoredState.shareOptions() = ShareOptions(shareMaxSize, shareMaxFps, shareBitRate).normalized()
+
+private suspend fun saveFrame(graph: AppGraph, image: ImageBitmap) {
+    try {
+        val location = withContext(Dispatchers.IO) {
+            saveSnapshot(image.encodePng(), SettingsBackedCaptureDestination(graph.adapters.settings), TimestampFileNamePolicy())
+        }
+        graph.toast(
+            "Screenshot saved to ${location.displayPath}",
+            FeedbackSeverity.Success,
+            FeedbackAction("Show") { DesktopRevealInFileManager().reveal(location) },
+        )
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        graph.toast("Could not save the screenshot. ${e.message.orEmpty()}", FeedbackSeverity.Error)
+    }
 }
 
 private suspend fun resolveSetup(graph: AppGraph): ScrcpySetup? {

@@ -29,11 +29,14 @@ internal fun scrcpyTouchPacket(action: Int, x: Int, y: Int, width: Int, height: 
         .putShort(width.toShort()).putShort(height.toShort())
         .putShort(if (action == TouchAction.UP) 0 else (-1).toShort()).putInt(0).putInt(0).array()
 
+/** scrcpy's ROTATE_DEVICE control message: the type byte alone, no payload. */
+internal fun scrcpyRotatePacket(): ByteArray = byteArrayOf(11)
+
 internal fun scrcpyKeyPacket(action: Int, code: Int): ByteArray =
     ByteBuffer.allocate(14).put(0).put(action.toByte()).putInt(code).putInt(0).putInt(0).array()
 
 /**
- * Writes scrcpy control messages (touch and key) on their own thread, in order.
+ * Writes scrcpy control messages (touch, key, rotate) on their own thread, in order.
  */
 internal class ScrcpyControl(private val output: OutputStream, onFailure: (Exception) -> Unit) : AutoCloseable {
     private data class Message(val bytes: ByteArray, val move: Boolean)
@@ -68,6 +71,12 @@ internal class ScrcpyControl(private val output: OutputStream, onFailure: (Excep
             queue.offerLast(Message(scrcpyKeyPacket(0, code), false))
             queue.offerLast(Message(scrcpyKeyPacket(1, code), false))
         }
+    }
+
+    /** Turns the device to its next orientation, like scrcpy's Ctrl+R. */
+    fun rotate() {
+        if (!active.get()) return
+        synchronized(queue) { queue.offerLast(Message(scrcpyRotatePacket(), false)) }
     }
 
     override fun close() {

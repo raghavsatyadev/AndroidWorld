@@ -43,7 +43,11 @@ class ScrcpyMirror {
         control.get()?.key(code)
     }
 
-    fun frames(setup: ScrcpySetup, serial: String, maxSize: Int = 1280, maxFps: Int = 30): Flow<ImageBitmap> = callbackFlow {
+    fun rotate() {
+        control.get()?.rotate()
+    }
+
+    fun frames(setup: ScrcpySetup, serial: String, options: ShareOptions = ShareOptions()): Flow<ImageBitmap> = callbackFlow {
         val video = AtomicReference<Socket?>()
         val controlSocket = AtomicReference<Socket?>()
         val sessionControl = AtomicReference<ScrcpyControl?>()
@@ -77,10 +81,11 @@ class ScrcpyMirror {
                 port = adb("forward", "tcp:0", "localabstract:scrcpy_$id")
                 server.set(
                     ProcessBuilder(
-                        setup.adb, "-s", serial, "shell", "CLASSPATH=$remote", "app_process", "/",
-                        "com.genymobile.scrcpy.Server", setup.version, "scid=$id", "tunnel_forward=true", "audio=false",
-                        "control=true", "clipboard_autosync=false", "send_device_meta=false", "send_dummy_byte=false",
-                        "max_size=$maxSize", "max_fps=$maxFps", "video_codec_options=profile=1,level=512", "cleanup=false",
+                        listOf(
+                            setup.adb, "-s", serial, "shell", "CLASSPATH=$remote", "app_process", "/",
+                            "com.genymobile.scrcpy.Server", setup.version, "scid=$id", "tunnel_forward=true", "audio=false",
+                            "control=true", "clipboard_autosync=false", "send_device_meta=false", "send_dummy_byte=false",
+                        ) + options.serverArgs() + listOf("video_codec_options=profile=1,level=512", "cleanup=false"),
                     ).redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD).start(),
                 )
                 val input = connect(port!!.toInt(), video, controlSocket, sessionControl) { close(it) }
