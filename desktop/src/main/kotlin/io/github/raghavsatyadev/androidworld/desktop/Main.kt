@@ -31,6 +31,7 @@ fun main() {
             icon = painterResource("androidworld-logo.svg"),
             state = rememberWindowState(size = DpSize(1280.dp, 840.dp)),
         ) {
+            LaunchedEffect(Unit) { window.coverFractionalEdge() }
             LaunchedEffect(Unit) {
                 showRequests.collect {
                     window.isMinimized = false
