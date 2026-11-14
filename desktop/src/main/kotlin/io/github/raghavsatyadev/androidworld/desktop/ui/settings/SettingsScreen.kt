@@ -18,12 +18,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.raghavsatyadev.androidworld.core.domain.discovery.ToolId
 import io.github.raghavsatyadev.androidworld.desktop.di.AppGraph
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.SectionCard
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(graph: AppGraph, darkTheme: Boolean?, onDarkTheme: (Boolean?) -> Unit) {
@@ -44,20 +47,24 @@ private fun ToolsCard(graph: AppGraph) {
     var scrcpy by remember { mutableStateOf(initial.scrcpyPathOverride.orEmpty()) }
     var captureDir by remember { mutableStateOf(initial.captureDirectory.orEmpty()) }
     var bufferKb by remember { mutableStateOf(initial.logcatBufferSizeKb.toString()) }
+    var refresh by remember { mutableStateOf(0) }
+    val guide = rememberInstallGuideState()
+    val scope = rememberCoroutineScope()
+    InstallGuideHost(graph, guide)
     SectionCard(title = "Tools and capture") {
         Text(
             "Leave a path empty to find it from ANDROID_HOME, the default SDK folder or PATH.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        OutlinedTextField(adb, { adb = it }, label = { Text("adb path") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(scrcpy, { scrcpy = it }, label = { Text("scrcpy path") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        ToolPathField(graph, ToolId.Adb, "adb path", adb, { adb = it }, refresh) { guide.open = ToolId.Adb }
+        ToolPathField(graph, ToolId.Scrcpy, "scrcpy path", scrcpy, { scrcpy = it }, refresh) { guide.open = ToolId.Scrcpy }
         OutlinedTextField(captureDir, { captureDir = it }, label = { Text("Screenshot folder") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(
             bufferKb, { bufferKb = it.filter(Char::isDigit) }, label = { Text("Logcat buffer (KB)") }, singleLine = true,
             modifier = Modifier.widthIn(max = 240.dp),
         )
         Button(onClick = {
-            graph.saveSettings {
+            val saving = graph.saveSettings {
                 it.copy(
                     adbPathOverride = adb.trim().ifEmpty { null },
                     scrcpyPathOverride = scrcpy.trim().ifEmpty { null },
@@ -66,6 +73,7 @@ private fun ToolsCard(graph: AppGraph) {
                 )
             }
             graph.toast("Settings saved")
+            scope.launch { saving?.join(); refresh++ }
         }) { Text("Save") }
     }
 }

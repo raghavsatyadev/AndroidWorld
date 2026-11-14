@@ -41,6 +41,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.raghavsatyadev.androidworld.desktop.di.AppGraph
+import io.github.raghavsatyadev.androidworld.desktop.ui.settings.HowToInstallLink
+import io.github.raghavsatyadev.androidworld.desktop.ui.settings.rememberMissingTool
 import io.github.raghavsatyadev.androidworld.desktop.mirror.AndroidKey
 import io.github.raghavsatyadev.androidworld.desktop.mirror.AutoTune
 import io.github.raghavsatyadev.androidworld.desktop.mirror.LinkSpeed
@@ -82,6 +84,8 @@ fun MirrorScreen(graph: AppGraph) {
     var running by remember(serial) { mutableStateOf(false) }
     var frame by remember(serial) { mutableStateOf<ImageBitmap?>(null) }
     var error by remember(serial) { mutableStateOf<String?>(null) }
+    // Checked again after each failed start, so the link goes away once the tool is installed.
+    val missing = rememberMissingTool(graph, ToolId.Scrcpy, ToolId.Adb, key = error)
     var updateWarning by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -131,7 +135,13 @@ fun MirrorScreen(graph: AppGraph) {
         LaunchedEffect(serial, options) {
             error = null
             try {
-                val setup = resolveSetup(graph) ?: error("scrcpy was not found. Install scrcpy 3 or newer and put it on PATH.")
+                val setup = resolveSetup(graph) ?: error(
+                    when (missingTool(graph)) {
+                        ToolId.Adb -> "adb was not found."
+                        ToolId.Scrcpy -> "scrcpy was not found. AndroidWorld needs scrcpy 3 or newer."
+                        null -> "scrcpy is installed, but scrcpy-server or its version could not be read. Reinstall scrcpy 3 or newer."
+                    },
+                )
                 mirror.frames(setup, serial, options).flowOn(Dispatchers.IO).collect { frame = it }
                 error = "The device stopped sharing its screen."
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -157,6 +167,7 @@ fun MirrorScreen(graph: AppGraph) {
             FilledTonalIconButton(onClick = { mirror.key(AndroidKey.APP_SWITCH) }, enabled = running) { Icon(Icons.Filled.Apps, "Recent apps") }
             RecordingControls(graph.recording)
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+            missing?.let { HowToInstallLink(graph, it) }
         }
         updateWarning?.let {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -276,6 +287,9 @@ private suspend fun measureStream(graph: AppGraph, mirror: ScrcpyMirror, serial:
 private const val AUTO_WARM_UP_MS = 2_000L
 private const val AUTO_RETRY_MS = 5_000L
 private const val AUTO_SECOND_LOOK_MS = 15_000L
+
+private suspend fun missingTool(graph: AppGraph): ToolId? =
+    listOf(ToolId.Adb, ToolId.Scrcpy).firstOrNull { graph.toolLocator.locate(it) !is DiscoveryOutcome.Found }
 
 private suspend fun resolveSetup(graph: AppGraph): ScrcpySetup? {
     val scrcpy = (graph.toolLocator.locate(ToolId.Scrcpy) as? DiscoveryOutcome.Found)?.tool ?: return null

@@ -38,6 +38,9 @@ import io.github.raghavsatyadev.androidworld.desktop.di.AppGraph
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.EmptyState
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.FactTile
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.SectionCard
+import io.github.raghavsatyadev.androidworld.desktop.ui.settings.HowToInstallLink
+import io.github.raghavsatyadev.androidworld.desktop.ui.settings.rememberMissingTool
+import io.github.raghavsatyadev.androidworld.core.domain.discovery.ToolId
 import io.github.raghavsatyadev.androidworld.core.application.capture.CaptureIntent
 import io.github.raghavsatyadev.androidworld.core.application.devicefacts.DeviceFactsIntent
 import io.github.raghavsatyadev.androidworld.core.application.devicefacts.DeviceFactsViewState
@@ -54,7 +57,13 @@ fun DeviceScreen(graph: AppGraph) {
     if (facts is DeviceFactsViewState.NoDevice) {
         val text = if (bar.picker.items.isEmpty()) "Connect a device with USB debugging on, or start an emulator."
         else "Pick a device from the menu at the top right."
-        EmptyState(text, icon = Icons.Filled.PhoneAndroid)
+        val missingAdb = rememberMissingTool(graph, ToolId.Adb)
+        if (missingAdb != null) {
+            Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
+                Text("adb was not found, so AndroidWorld cannot see any device.", style = MaterialTheme.typography.bodyLarge)
+                HowToInstallLink(graph, ToolId.Adb)
+            }
+        } else EmptyState(text, icon = Icons.Filled.PhoneAndroid)
         return
     }
     Column(

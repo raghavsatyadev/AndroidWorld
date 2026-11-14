@@ -312,11 +312,11 @@ class AppGraph(val store: AppStore = AppStore(), val version: String = "0.1.0") 
     val remote by lazy { RemoteModule(this) }
 
     /** Saves tool paths / capture dir and drops cached tool lookups that depend on them. */
-    fun saveSettings(change: (SettingsState) -> SettingsState) {
+    fun saveSettings(change: (SettingsState) -> SettingsState): Job? {
         val before = adapters.readSettingsNow()
         val after = change(before)
-        if (after == before) return
-        rootScope.launch {
+        if (after == before) return null
+        return rootScope.launch {
             adapters.settings.writeSettings(after)
             if (after.adbPathOverride != before.adbPathOverride) toolLocator.invalidate(ToolId.Adb)
             if (after.scrcpyPathOverride != before.scrcpyPathOverride) toolLocator.invalidate(ToolId.Scrcpy)
