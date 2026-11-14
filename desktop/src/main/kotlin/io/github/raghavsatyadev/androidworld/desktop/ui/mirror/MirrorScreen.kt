@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -41,6 +42,7 @@ import io.github.raghavsatyadev.androidworld.desktop.di.AppGraph
 import io.github.raghavsatyadev.androidworld.desktop.mirror.AndroidKey
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpyMirror
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpySetup
+import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpyUpdateCheck
 import io.github.raghavsatyadev.androidworld.desktop.mirror.TouchAction
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.EmptyState
 import io.github.raghavsatyadev.androidworld.core.domain.device.SelectedDeviceState
@@ -49,6 +51,7 @@ import io.github.raghavsatyadev.androidworld.core.domain.discovery.ToolId
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 
 /** Live screen share of the selected device through scrcpy's server, with touch and nav keys. */
 @Composable
@@ -63,6 +66,14 @@ fun MirrorScreen(graph: AppGraph) {
     var running by remember(serial) { mutableStateOf(false) }
     var frame by remember(serial) { mutableStateOf<ImageBitmap?>(null) }
     var error by remember(serial) { mutableStateOf<String?>(null) }
+    var updateWarning by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        updateWarning = withContext(Dispatchers.IO) {
+            val scrcpy = (graph.toolLocator.locate(ToolId.Scrcpy) as? DiscoveryOutcome.Found)?.tool
+            scrcpy?.let { ScrcpyUpdateCheck.warning(it.version.raw) }
+        }
+    }
 
     if (running) {
         LaunchedEffect(serial) {
@@ -94,6 +105,12 @@ fun MirrorScreen(graph: AppGraph) {
             FilledTonalIconButton(onClick = { mirror.key(AndroidKey.APP_SWITCH) }, enabled = running) { Icon(Icons.Filled.Apps, "Recent apps") }
             RecordingControls(graph.recording)
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+        }
+        updateWarning?.let {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Warning, null, tint = MaterialTheme.colorScheme.tertiary)
+                Text(it, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodyMedium)
+            }
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             val image = frame
