@@ -187,6 +187,23 @@ class EmulatorScreenViewModelTest {
     }
 
     @Test
+    fun `folded frame maps pointer to the outer display size`() = testScope { viewModel, connection, _ ->
+        viewModel.handle(EmulatorScreenIntent.Start("emulator-5554"))
+        runCurrent()
+
+        // Inner LCD is 1080x2424 in the fake; the folded outer display here is 540x1200.
+        val frame = EmulatorFrame(2, 4, ByteArray(32), 1, ScreenRotation.Portrait, foldedWidth = 540, foldedHeight = 1200)
+        connection.framesFlow.emit(frame)
+        runCurrent()
+
+        val shown = FitRect(0f, 0f, 270f, 600f)
+        viewModel.handle(EmulatorScreenIntent.Pointer(viewX = 135f, viewY = 300f, shown = shown, pressed = true))
+        runCurrent()
+
+        connection.sentInputs shouldBe listOf(EmulatorInput.Mouse(270, 600, buttons = 1))
+    }
+
+    @Test
     fun `key intent handled by keyFallback is not sent to connection`() = testScopeWithFallback(
         FakeKeyFallback(result = true),
     ) { viewModel, connection, _, fallback ->
@@ -226,6 +243,34 @@ class EmulatorScreenViewModelTest {
 
         viewModel.state.value.rotation shouldBe ScreenRotation.Landscape
         connection.rotations shouldBe listOf(ScreenRotation.Landscape)
+    }
+
+    @Test
+    fun `closing a landscape foldable also rotates it upright`() = testScope { viewModel, connection, _ ->
+        viewModel.handle(EmulatorScreenIntent.Start("emulator-5554"))
+        runCurrent()
+        connection.framesFlow.emit(EmulatorFrame(2, 1, ByteArray(8), 1, ScreenRotation.ReverseLandscape))
+        runCurrent()
+
+        viewModel.handle(EmulatorScreenIntent.SetPosture(FoldPosture.Closed))
+        runCurrent()
+
+        connection.postures shouldBe listOf(FoldPosture.Closed)
+        connection.rotations shouldBe listOf(ScreenRotation.Portrait)
+        viewModel.state.value.rotation shouldBe ScreenRotation.Portrait
+    }
+
+    @Test
+    fun `opening a foldable keeps its rotation`() = testScope { viewModel, connection, _ ->
+        viewModel.handle(EmulatorScreenIntent.Start("emulator-5554"))
+        runCurrent()
+        connection.framesFlow.emit(EmulatorFrame(2, 1, ByteArray(8), 1, ScreenRotation.ReverseLandscape))
+        runCurrent()
+
+        viewModel.handle(EmulatorScreenIntent.SetPosture(FoldPosture.Opened))
+        runCurrent()
+
+        connection.rotations shouldBe emptyList()
     }
 
     @Test

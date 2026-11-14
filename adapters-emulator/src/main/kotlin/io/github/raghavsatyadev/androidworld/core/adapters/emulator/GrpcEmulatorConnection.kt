@@ -65,7 +65,14 @@ class GrpcEmulatorConnection(
                 val bytes = image.image.toByteArray()
                 if (w > 0 && h > 0 && bytes.size >= w * h * 4) {
                     val rotation = ScreenRotation.ofIndex(fmt.rotation.rotationValue)
-                    trySend(EmulatorFrame(w, h, bytes, image.seq, rotation))
+                    val folded = if (fmt.hasFoldedDisplay()) fmt.foldedDisplay else null
+                    trySend(
+                        EmulatorFrame(
+                            w, h, bytes, image.seq, rotation,
+                            foldedWidth = folded?.width ?: 0,
+                            foldedHeight = folded?.height ?: 0,
+                        ),
+                    )
                 }
             }
 

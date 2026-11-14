@@ -192,14 +192,16 @@ class EmulatorScreenViewModel(
 
     private fun pointer(viewX: Float, viewY: Float, shown: FitRect, pressed: Boolean) {
         val hw = _state.value.hardware ?: return
-        if (_state.value.frame == null) return
+        val frame = _state.value.frame ?: return
+        // A folded foldable takes input in its outer display's pixels, not the inner LCD's.
+        val folded = frame.foldedWidth > 0 && frame.foldedHeight > 0
 
         val point = ScreenGeometry.toDevice(
             viewX = viewX,
             viewY = viewY,
             shown = shown,
-            naturalW = hw.width,
-            naturalH = hw.height,
+            naturalW = if (folded) frame.foldedWidth else hw.width,
+            naturalH = if (folded) frame.foldedHeight else hw.height,
             rotation = _state.value.rotation,
         )
 
@@ -242,9 +244,14 @@ class EmulatorScreenViewModel(
         if (_state.value.hardware?.foldable != true) return
         _state.update { it.copy(posture = posture) }
         val conn = connection ?: return
+        // Book-style foldables boot with a landscape physical rotation (their open layout is
+        // landscape), so folding them would stream the outer display sideways. Stand it upright.
+        val uprightOnClose = posture == FoldPosture.Closed && _state.value.rotation != ScreenRotation.Portrait
+        if (uprightOnClose) _state.update { it.copy(rotation = ScreenRotation.Portrait) }
         scope.launch(dispatchers.io) {
             try {
                 conn.setPosture(posture)
+                if (uprightOnClose) conn.rotate(ScreenRotation.Portrait)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
             }

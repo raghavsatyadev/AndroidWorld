@@ -19,13 +19,20 @@ enum class ScreenRotation(val degrees: Int) {
     }
 }
 
-/** A raw RGBA8888 frame delivered from the emulator's display stream. */
+/**
+ * A raw RGBA8888 frame delivered from the emulator's display stream.
+ *
+ * [foldedWidth] x [foldedHeight] is the natural size of a folded foldable's outer display, which
+ * then replaces the hardware LCD size for touch input; 0 when the device isn't folded.
+ */
 class EmulatorFrame(
     val width: Int,
     val height: Int,
     val rgba: ByteArray,
     val seq: Int,
     val rotation: ScreenRotation,
+    val foldedWidth: Int = 0,
+    val foldedHeight: Int = 0,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -34,6 +41,8 @@ class EmulatorFrame(
             height == other.height &&
             seq == other.seq &&
             rotation == other.rotation &&
+            foldedWidth == other.foldedWidth &&
+            foldedHeight == other.foldedHeight &&
             rgba.contentEquals(other.rgba)
     }
 
@@ -42,6 +51,8 @@ class EmulatorFrame(
         result = 31 * result + height
         result = 31 * result + seq
         result = 31 * result + rotation.hashCode()
+        result = 31 * result + foldedWidth
+        result = 31 * result + foldedHeight
         result = 31 * result + rgba.contentHashCode()
         return result
     }
