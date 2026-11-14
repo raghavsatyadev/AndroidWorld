@@ -34,10 +34,10 @@ Legend: **R** reuse core code · **P** port logic to Kotlin · **CLI** wrap `and
 | Mirroring + recording (scrcpy) (done) | R | 2 |
 | Layout inspector + accessibility audit (done) | R | 3 |
 | Emulators: list/start/stop/create/delete (done) | CLI | 2 |
-| System images download | CLI (`android sdk`) | 3 |
-| Embedded emulator screen (gRPC stream + touch) | P | 3 |
+| System images download (done) | CLI (`android sdk`) | 3 |
+| Embedded emulator screen (gRPC stream + touch) (done) | P | 3 |
 | Device frames, rotation, fold (done) | P | 4 |
-| QR Wi-Fi pairing, TV remote, software keyboard | P | 3 |
+| QR Wi-Fi pairing, TV remote, software keyboard (done) | P | 3 |
 | Contacts / SMS / call log / calendar viewers (done) | P (content providers) | 3 |
 | Command browser (dumpsys, input, pm, settings, setprop…) (done) | P (data + runner) | 2 |
 | Built-in adb shell terminal (done) | P | 3 |
