@@ -3,6 +3,7 @@ package io.github.raghavsatyadev.androidworld.desktop.ui.inspector
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -74,74 +75,80 @@ fun NodeTreePane(
             TextButton(onClick = onCollapseAll) { Text("Collapse all") }
         }
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            items(state.rows, key = { it.node.id }) { row ->
-                val selected = row.node.id == state.selectedNodeId
-                val hasFinding = row.node.id in findingNodeIds
-                val rowBg = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            // Deep trees would push names off the pane at a fixed step; shrink the step so the
+            // deepest row's indent never takes more than half the width.
+            val deepest = state.rows.maxOfOrNull { it.depth } ?: 0
+            val indentStep = if (deepest == 0) 14.dp else minOf(14.dp, maxWidth * 0.5f / deepest)
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                items(state.rows, key = { it.node.id }) { row ->
+                    val selected = row.node.id == state.selectedNodeId
+                    val hasFinding = row.node.id in findingNodeIds
+                    val rowBg = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
 
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .background(rowBg)
-                        .clickable { onSelect(row.node.id) }
-                        .padding(
-                            start = (row.depth * 14).dp,
-                            end = 8.dp,
-                            top = 4.dp,
-                            bottom = 4.dp,
-                        ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (row.hasChildren) {
-                        Box(
-                            modifier = Modifier.size(20.dp).clickable { onToggle(row.node.id) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = if (row.expanded) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowRight,
-                                contentDescription = if (row.expanded) "Collapse" else "Expand",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .background(rowBg)
+                            .clickable { onSelect(row.node.id) }
+                            .padding(
+                                start = indentStep * row.depth,
+                                end = 8.dp,
+                                top = 4.dp,
+                                bottom = 4.dp,
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (row.hasChildren) {
+                            Box(
+                                modifier = Modifier.size(20.dp).clickable { onToggle(row.node.id) },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = if (row.expanded) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowRight,
+                                    contentDescription = if (row.expanded) "Collapse" else "Expand",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            Spacer(Modifier.size(20.dp))
+                        }
+
+                        if (hasFinding) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.error),
                             )
+                        } else {
+                            Spacer(Modifier.width(4.dp))
                         }
-                    } else {
-                        Spacer(Modifier.size(20.dp))
-                    }
 
-                    if (hasFinding) {
-                        Box(
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.error),
+                        val shortName = row.node.shortClassName.ifEmpty { "View" }
+                        val label = row.node.label
+                        val text = buildAnnotatedString {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(shortName)
+                            }
+                            if (label.isNotEmpty() && label != shortName) {
+                                append(" ")
+                                append(label)
+                            }
+                        }
+
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
-                    } else {
-                        Spacer(Modifier.width(4.dp))
                     }
-
-                    val shortName = row.node.shortClassName.ifEmpty { "View" }
-                    val label = row.node.label
-                    val text = buildAnnotatedString {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(shortName)
-                        }
-                        if (label.isNotEmpty() && label != shortName) {
-                            append(" ")
-                            append(label)
-                        }
-                    }
-
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
                 }
             }
         }

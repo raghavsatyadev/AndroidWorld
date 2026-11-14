@@ -169,14 +169,7 @@ class LayoutInspectorViewModel(
         _state.update { it.copy(capturing = true, error = null) }
         scope.launch(dispatchers.io) {
             val result = capture.snapshot(serial)
-            val activity = runCatching {
-                when (val front = currentApp.read(serial).foreground) {
-                    is ForegroundState.App -> "${front.packageName}/${front.activity}"
-                    is ForegroundState.SystemUi -> "System UI"
-                    is ForegroundState.Home -> "${front.launcherPackage} (home)"
-                    else -> null
-                }
-            }.getOrNull()
+            val activity = runCatching { foregroundLabel(currentApp.read(serial).foreground) }.getOrNull()
             _state.update { state ->
                 when (result) {
                     is LayoutCapture.Captured -> {
@@ -195,4 +188,15 @@ class LayoutInspectorViewModel(
             }
         }
     }
+}
+
+/** Header label for what was on screen; blank package or activity names are left out, not shown as "/". */
+internal fun foregroundLabel(front: ForegroundState?): String? = when (front) {
+    is ForegroundState.App -> listOf(front.packageName, front.activity)
+        .filter { it.isNotBlank() }
+        .joinToString("/")
+        .ifEmpty { null }
+    is ForegroundState.SystemUi -> "System UI"
+    is ForegroundState.Home -> front.launcherPackage.takeIf { it.isNotBlank() }?.let { "$it (home)" } ?: "Home screen"
+    else -> null
 }
