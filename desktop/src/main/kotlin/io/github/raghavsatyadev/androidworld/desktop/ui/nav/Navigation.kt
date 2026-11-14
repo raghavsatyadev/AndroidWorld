@@ -43,21 +43,25 @@ enum class Section(val label: String) {
     General("General"),
 }
 
-/** A top-level rail destination, grouping related [Section]s so the rail stays short. */
+/**
+ * A top-level rail destination, grouping related [Section]s so the rail stays short. Rail order:
+ * the device and its screen, then what is on it (apps, files, data), its logs and settings, the
+ * shell, emulators, and the app's own settings last.
+ */
 enum class Area(val label: String, val icon: ImageVector, val sections: List<Section>) {
     Device("Device", Icons.Filled.PhoneAndroid, listOf(Section.Overview)),
+    Screen("Screen", Icons.Filled.ScreenShare, listOf(Section.Share, Section.Inspector, Section.Emulator)),
     Apps("Apps", Icons.Filled.Apps, listOf(Section.Installed)),
+    Files("Files", Icons.Filled.Folder, listOf(Section.Files)),
+    PersonalData("Data", Icons.Filled.Contacts, listOf(Section.PersonalData)),
+    Logcat("Logcat", Icons.AutoMirrored.Filled.Notes, listOf(Section.Logcat)),
     Controls(
         "Controls", Icons.Filled.Tune,
         listOf(Section.Display, Section.Developer, Section.Region, Section.Network, Section.Links),
     ),
-    Screen("Screen", Icons.Filled.ScreenShare, listOf(Section.Share, Section.Inspector, Section.Emulator)),
-    Logcat("Logcat", Icons.AutoMirrored.Filled.Notes, listOf(Section.Logcat)),
-    Files("Files", Icons.Filled.Folder, listOf(Section.Files)),
-    Emulators("Emulators", Icons.Filled.Devices, listOf(Section.Avds)),
-    Commands("Commands", Icons.Filled.Terminal, listOf(Section.Commands, Section.Terminal, Section.Dumpsys)),
     System("System", Icons.Filled.Memory, listOf(Section.Properties, Section.DeviceSettings, Section.Services)),
-    PersonalData("Data", Icons.Filled.Contacts, listOf(Section.PersonalData)),
+    Commands("Commands", Icons.Filled.Terminal, listOf(Section.Commands, Section.Terminal, Section.Dumpsys)),
+    Emulators("Emulators", Icons.Filled.Devices, listOf(Section.Avds)),
     Settings("Settings", Icons.Filled.Settings, listOf(Section.General)),
 }
 

@@ -2,7 +2,13 @@ package io.github.raghavsatyadev.androidworld.desktop.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.WideNavigationRail
+import androidx.compose.material3.WideNavigationRailDefaults
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailValue
 import androidx.compose.material3.rememberWideNavigationRailState
@@ -108,32 +115,41 @@ private fun Rail(navigator: Navigator, location: Location, mcpRunning: Boolean) 
     val state = rememberWideNavigationRailState(WideNavigationRailValue.Collapsed)
     val scope = rememberCoroutineScope()
     val expanded = state.targetValue == WideNavigationRailValue.Expanded
-    WideNavigationRail(
-        state = state,
-        header = {
-            IconButton(
-                onClick = { scope.launch { if (expanded) state.collapse() else state.expand() } },
-                modifier = Modifier.padding(start = 24.dp, top = 8.dp, bottom = 8.dp),
-            ) {
-                Icon(if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu, if (expanded) "Collapse menu" else "Expand menu")
+    // The rail lays its items out in a fixed height, so a short window cut the last ones off. Give
+    // it at least the height all items need and scroll it when the window is shorter.
+    BoxWithConstraints(Modifier.fillMaxHeight().background(WideNavigationRailDefaults.colors().containerColor)) {
+        val railHeight = maxOf(maxHeight, RailMinHeight)
+        WideNavigationRail(
+            modifier = Modifier.verticalScroll(rememberScrollState()).height(railHeight),
+            state = state,
+            header = {
+                IconButton(
+                    onClick = { scope.launch { if (expanded) state.collapse() else state.expand() } },
+                    modifier = Modifier.padding(start = 24.dp, top = 8.dp, bottom = 8.dp),
+                ) {
+                    Icon(if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu, if (expanded) "Collapse menu" else "Expand menu")
+                }
+            },
+        ) {
+            Area.entries.forEach { area ->
+                WideNavigationRailItem(
+                    railExpanded = expanded,
+                    selected = location.area == area,
+                    onClick = { navigator.open(area) },
+                    icon = {
+                        if (area == Area.Settings && mcpRunning) {
+                            BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.primary) }) { Icon(area.icon, null) }
+                        } else Icon(area.icon, null)
+                    },
+                    label = { Text(area.label) },
+                )
             }
-        },
-    ) {
-        Area.entries.forEach { area ->
-            WideNavigationRailItem(
-                railExpanded = expanded,
-                selected = location.area == area,
-                onClick = { navigator.open(area) },
-                icon = {
-                    if (area == Area.Settings && mcpRunning) {
-                        BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.primary) }) { Icon(area.icon, null) }
-                    } else Icon(area.icon, null)
-                },
-                label = { Text(area.label) },
-            )
         }
     }
 }
+
+/** Header plus every rail item with its spacing; below this the rail scrolls. */
+private val RailMinHeight = 160.dp + 68.dp * Area.entries.size
 
 /** Connected toggle buttons for an area's sections (M3E button group). */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
