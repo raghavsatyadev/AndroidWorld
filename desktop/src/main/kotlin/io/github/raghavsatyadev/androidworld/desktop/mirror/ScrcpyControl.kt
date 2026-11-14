@@ -32,6 +32,9 @@ internal fun scrcpyTouchPacket(action: Int, x: Int, y: Int, width: Int, height: 
 /** scrcpy's ROTATE_DEVICE control message: the type byte alone, no payload. */
 internal fun scrcpyRotatePacket(): ByteArray = byteArrayOf(11)
 
+/** scrcpy's RESET_VIDEO control message: restarts the encoder, so the next frame is a key frame. */
+internal fun scrcpyResetVideoPacket(): ByteArray = byteArrayOf(17)
+
 internal fun scrcpyKeyPacket(action: Int, code: Int): ByteArray =
     ByteBuffer.allocate(14).put(0).put(action.toByte()).putInt(code).putInt(0).putInt(0).array()
 
@@ -77,6 +80,12 @@ internal class ScrcpyControl(private val output: OutputStream, onFailure: (Excep
     fun rotate() {
         if (!active.get()) return
         synchronized(queue) { queue.offerLast(Message(scrcpyRotatePacket(), false)) }
+    }
+
+    /** Asks for a fresh key frame, like scrcpy's Ctrl+Shift+R. Nothing changes on the device screen. */
+    fun resetVideo() {
+        if (!active.get()) return
+        synchronized(queue) { queue.offerLast(Message(scrcpyResetVideoPacket(), false)) }
     }
 
     override fun close() {

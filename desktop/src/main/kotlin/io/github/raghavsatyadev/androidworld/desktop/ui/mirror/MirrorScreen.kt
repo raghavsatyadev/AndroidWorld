@@ -37,14 +37,18 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.raghavsatyadev.androidworld.desktop.di.AppGraph
 import io.github.raghavsatyadev.androidworld.desktop.mirror.AndroidKey
+import io.github.raghavsatyadev.androidworld.desktop.mirror.AutoTune
+import io.github.raghavsatyadev.androidworld.desktop.mirror.LinkSpeed
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpyMirror
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpySetup
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ScrcpyUpdateCheck
 import io.github.raghavsatyadev.androidworld.desktop.mirror.ShareOptions
+import io.github.raghavsatyadev.androidworld.desktop.mirror.StreamMeasure
 import io.github.raghavsatyadev.androidworld.desktop.mirror.TouchAction
 import io.github.raghavsatyadev.androidworld.desktop.mirror.encodePng
 import io.github.raghavsatyadev.androidworld.desktop.mirror.saveSnapshot
@@ -60,6 +64,7 @@ import io.github.raghavsatyadev.androidworld.core.domain.discovery.DiscoveryOutc
 import io.github.raghavsatyadev.androidworld.core.domain.discovery.ToolId
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -86,7 +91,40 @@ fun MirrorScreen(graph: AppGraph) {
         }
     }
     var options by remember { mutableStateOf(graph.store.state.shareOptions()) }
+    var auto by remember { mutableStateOf(graph.store.state.shareAuto) }
+    var viewSize by remember { mutableStateOf(IntSize.Zero) }
     val scope = rememberCoroutineScope()
+
+    fun apply(picked: ShareOptions) {
+        options = picked
+        graph.store.update { it.copy(shareMaxSize = picked.maxSize, shareMaxFps = picked.maxFps, shareBitRate = picked.bitRate) }
+    }
+
+    if (running && auto && frame != null) {
+        // Not keyed on options: the stream restarting with a new pick must not restart the timer.
+        LaunchedEffect(serial) {
+            delay(AUTO_WARM_UP_MS)
+            var firstCheck = true
+            while (true) {
+                val measure = measureStream(graph, mirror, serial)
+                val image = frame
+                if (measure == null || image == null || viewSize == IntSize.Zero) {
+                    delay(AUTO_RETRY_MS)
+                    continue
+                }
+                val aspect = minOf(image.width, image.height).toDouble() / maxOf(image.width, image.height)
+                val scale = minOf(viewSize.width.toFloat() / image.width, viewSize.height.toFloat() / image.height)
+                val picked = AutoTune.next(options, (maxOf(image.width, image.height) * scale).toInt(), aspect, measure)
+                if (picked != options) {
+                    apply(picked)
+                    graph.toast("Auto set ${AutoTune.describe(picked, aspect, measure)}")
+                }
+                // The first measurement runs before the JVM has compiled the decoder and reads slow, so look again soon.
+                delay(if (firstCheck) AUTO_SECOND_LOOK_MS else AutoTune.recheckSeconds(serial, measure.linkMbps) * 1000)
+                firstCheck = false
+            }
+        }
+    }
 
     if (running) {
         // A new options value cancels this effect and starts a fresh stream with the new settings.
@@ -130,14 +168,21 @@ fun MirrorScreen(graph: AppGraph) {
             running = running,
             canSnapshot = frame != null,
             options = options,
+            auto = auto,
+            onAuto = { on ->
+                auto = on
+                graph.store.update { it.copy(shareAuto = on) }
+            },
             onOptions = { picked ->
-                options = picked
-                graph.store.update { it.copy(shareMaxSize = picked.maxSize, shareMaxFps = picked.maxFps, shareBitRate = picked.bitRate) }
+                // A hand-picked setting would be overwritten at the next check, so it turns Auto off.
+                auto = false
+                graph.store.update { it.copy(shareAuto = false) }
+                apply(picked)
             },
             onSnapshot = { frame?.let { image -> scope.launch { saveFrame(graph, image) } } },
             onRotate = mirror::rotate,
         )
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().onSizeChanged { viewSize = it }, contentAlignment = Alignment.Center) {
             val image = frame
             when {
                 image != null && running -> DeviceFrame(image, mirror)
@@ -220,6 +265,17 @@ private suspend fun saveFrame(graph: AppGraph, image: ImageBitmap) {
         graph.toast("Could not save the screenshot. ${e.message.orEmpty()}", FeedbackSeverity.Error)
     }
 }
+
+/** Times key frame decoding on the running stream and the adb link; null when a tool or the stream is missing. */
+private suspend fun measureStream(graph: AppGraph, mirror: ScrcpyMirror, serial: String): StreamMeasure? {
+    val setup = resolveSetup(graph) ?: return null
+    val cost = mirror.keyframeCost() ?: return null
+    return StreamMeasure(cost, withContext(Dispatchers.IO) { LinkSpeed.measureMbps(setup.adb, serial) })
+}
+
+private const val AUTO_WARM_UP_MS = 2_000L
+private const val AUTO_RETRY_MS = 5_000L
+private const val AUTO_SECOND_LOOK_MS = 15_000L
 
 private suspend fun resolveSetup(graph: AppGraph): ScrcpySetup? {
     val scrcpy = (graph.toolLocator.locate(ToolId.Scrcpy) as? DiscoveryOutcome.Found)?.tool ?: return null

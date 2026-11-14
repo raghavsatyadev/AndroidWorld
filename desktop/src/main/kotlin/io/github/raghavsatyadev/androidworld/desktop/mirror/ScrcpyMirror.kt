@@ -12,9 +12,11 @@ import kotlin.concurrent.thread
 import kotlin.random.Random
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jcodec.codecs.h264.H264Decoder
 import org.jcodec.common.model.ColorSpace
 import org.jcodec.common.model.Picture
@@ -34,6 +36,7 @@ data class ScrcpySetup(val adb: String, val server: File, val version: String)
  */
 class ScrcpyMirror {
     private val control = AtomicReference<ScrcpyControl?>()
+    private val meter = DecodeMeter()
 
     fun touch(action: Int, x: Int, y: Int, width: Int, height: Int) {
         control.get()?.touch(action, x, y, width, height)
@@ -45,6 +48,20 @@ class ScrcpyMirror {
 
     fun rotate() {
         control.get()?.rotate()
+    }
+
+    /**
+     * Measures what a key frame costs to decode here, in milliseconds per megapixel: asks the running
+     * stream for a few fresh key frames and times them. Null when no stream is running to measure.
+     */
+    suspend fun keyframeCost(): Double? {
+        val start = meter.count
+        repeat(KEYFRAME_PROBES) {
+            val before = meter.count
+            control.get()?.resetVideo() ?: return@repeat
+            withTimeoutOrNull(1_500) { while (meter.count == before) delay(20) }
+        }
+        return meter.median(start)
     }
 
     fun frames(setup: ScrcpySetup, serial: String, options: ShareOptions = ShareOptions()): Flow<ImageBitmap> = callbackFlow {
@@ -167,6 +184,7 @@ class ScrcpyMirror {
                 decoder = H264Decoder.createH264DecoderFromCodecPrivate(ByteBuffer.wrap(bytes))
                 continue
             }
+            val started = System.nanoTime()
             val decoded = decoder.decodeFrame(ByteBuffer.wrap(bytes), pixels ?: continue) ?: continue
             val color = rgb ?: Picture.create(decoded.width, decoded.height, ColorSpace.RGB).also { rgb = it }
             ColorUtil.getTransform(decoded.color, ColorSpace.RGB).transform(decoded, color)
@@ -187,6 +205,7 @@ class ScrcpyMirror {
             val bitmap = Bitmap()
             bitmap.installPixels(ImageInfo(width, height, ColorType.RGBA_8888, ColorAlphaType.OPAQUE), output.copyOf(), width * 4)
             bitmap.setImmutable()
+            if (first and KEY_FRAME_FLAG != 0) meter.record(System.nanoTime() - started, width * height)
             trySend(bitmap.asComposeImageBitmap())
         }
     }
@@ -194,5 +213,7 @@ class ScrcpyMirror {
     private companion object {
         const val H264 = 0x68323634
         const val CONFIG_FLAG = 0x40000000
+        const val KEY_FRAME_FLAG = 0x20000000
+        const val KEYFRAME_PROBES = 4
     }
 }

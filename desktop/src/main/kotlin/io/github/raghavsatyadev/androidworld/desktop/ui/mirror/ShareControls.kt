@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -28,13 +30,16 @@ import io.github.raghavsatyadev.androidworld.desktop.mirror.ShareOptions
 
 /**
  * Second share toolbar row: screenshot of the current frame, rotate the device, and the stream
- * settings (resolution, frame rate, bitrate). Picking a new setting restarts the stream.
+ * settings (resolution, frame rate, bitrate). Picking a new setting restarts the stream. With Auto on,
+ * the app measures this PC and the connection and picks all three, and checks again every so often.
  */
 @Composable
 fun ShareControls(
     running: Boolean,
     canSnapshot: Boolean,
     options: ShareOptions,
+    auto: Boolean,
+    onAuto: (Boolean) -> Unit,
     onOptions: (ShareOptions) -> Unit,
     onSnapshot: () -> Unit,
     onRotate: () -> Unit,
@@ -47,6 +52,12 @@ fun ShareControls(
             Icon(Icons.Filled.ScreenRotation, null, Modifier.size(18.dp)); Text("  Rotate")
         }
         Text("Stream", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        FilterChip(
+            selected = auto,
+            onClick = { onAuto(!auto) },
+            label = { Text("Auto") },
+            leadingIcon = { Icon(Icons.Filled.AutoFixHigh, null, Modifier.size(18.dp)) },
+        )
         OptionPicker("Resolution", options.maxSize, ShareOptions.MAX_SIZES, ShareOptions::sizeLabel) {
             onOptions(options.copy(maxSize = it))
         }

@@ -34,6 +34,8 @@ data class StoredState(
     val shareMaxSize: Int = 1280,
     val shareMaxFps: Int = 30,
     val shareBitRate: Int = 8_000_000,
+    /** Auto measures decode and link speed and picks the three settings above, again every so often. */
+    val shareAuto: Boolean = false,
     /** Most recent first, each `host:port` as [io.github.raghavsatyadev.androidworld.core.domain.network.ProxyEndpoint.render] writes it. */
     val recentProxies: List<String> = emptyList(),
     val deepLinks: StoredDeepLinks = StoredDeepLinks(),
