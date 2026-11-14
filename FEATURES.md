@@ -36,7 +36,7 @@ Legend: **R** reuse core code · **P** port logic to Kotlin · **CLI** wrap `and
 | Emulators: list/start/stop/create/delete (done) | CLI | 2 |
 | System images download | CLI (`android sdk`) | 3 |
 | Embedded emulator screen (gRPC stream + touch) | P | 3 |
-| Device frames, rotation, fold | P | 4 |
+| Device frames, rotation, fold (done) | P | 4 |
 | QR Wi-Fi pairing, TV remote, software keyboard | P | 3 |
 | Contacts / SMS / call log / calendar viewers (done) | P (content providers) | 3 |
 | Command browser (dumpsys, input, pm, settings, setprop…) (done) | P (data + runner) | 2 |

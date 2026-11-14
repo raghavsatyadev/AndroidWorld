@@ -6,6 +6,7 @@ import io.github.raghavsatyadev.androidworld.core.domain.emulator.screen.SkinLay
 import io.github.raghavsatyadev.androidworld.core.domain.emulator.screen.SkinLayoutParser
 import io.github.raghavsatyadev.androidworld.desktop.tools.AndroidSdk
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import org.jetbrains.skia.Image
 
@@ -31,15 +32,25 @@ class SdkSkins(private val sdk: AndroidSdk = AndroidSdk()) {
 
         val map = mutableMapOf<String, SkinLayout>()
         for (dir in dirs) {
-            val layoutFile = dir.resolve("layout")
-            if (Files.isRegularFile(layoutFile)) {
-                val text = runCatching { Files.readString(layoutFile) }.getOrNull() ?: continue
-                val layout = runCatching { SkinLayoutParser.parse(text) }.getOrNull() ?: continue
-                map[dir.fileName.toString()] = layout
+            val dirName = dir.fileName.toString()
+            loadLayout(dir.resolve("layout"))?.let { map[dirName] = it }
+
+            // Foldables keep per-posture variants in subfolders (e.g. closed/, default/).
+            val subDirs = runCatching {
+                Files.list(dir).use { stream -> stream.filter { Files.isDirectory(it) }.toList() }
+            }.getOrNull().orEmpty()
+            for (sub in subDirs) {
+                loadLayout(sub.resolve("layout"))?.let { map["$dirName/${sub.fileName}"] = it }
             }
         }
         cachedLayouts = map
         return map
+    }
+
+    private fun loadLayout(file: Path): SkinLayout? {
+        if (!Files.isRegularFile(file)) return null
+        val text = runCatching { Files.readString(file) }.getOrNull() ?: return null
+        return runCatching { SkinLayoutParser.parse(text) }.getOrNull()
     }
 
     fun background(name: String): ImageBitmap? {
@@ -47,7 +58,9 @@ class SdkSkins(private val sdk: AndroidSdk = AndroidSdk()) {
         val layout = layouts()[name] ?: return null
         val bgName = layout.background ?: return null
         val root = sdk.root() ?: return null
-        val bgPath = root.resolve("skins").resolve(name).resolve(bgName)
+        // Keys may be "dir/sub"; resolve each segment so the path is valid on every OS.
+        val skinDir = name.split('/').fold(root.resolve("skins")) { acc, segment -> acc.resolve(segment) }
+        val bgPath = skinDir.resolve(bgName)
         if (!Files.isRegularFile(bgPath)) return null
 
         return runCatching {

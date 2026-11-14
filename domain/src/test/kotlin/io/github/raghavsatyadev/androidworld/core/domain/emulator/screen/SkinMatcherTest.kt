@@ -100,4 +100,74 @@ class SkinMatcherTest {
 
         SkinMatcher.pick(available, hw) shouldBe null
     }
+
+    private val foldVariants = mapOf(
+        "pixel_9_pro_fold/closed" to layout(1080, 2424),
+        "pixel_9_pro_fold/default" to layout(2076, 2152),
+    )
+
+    @Test
+    fun `foldable without frame dimensions picks default variant`() {
+        val hw = EmulatorHardware(
+            width = 2076,
+            height = 2152,
+            density = 420,
+            postures = emptyList(),
+            skinName = "pixel_9_pro_fold",
+        )
+
+        SkinMatcher.pick(foldVariants, hw) shouldBe "pixel_9_pro_fold/default"
+    }
+
+    @Test
+    fun `foldable frame matching closed aspect picks closed variant`() {
+        val hw = EmulatorHardware(
+            width = 2076,
+            height = 2152,
+            density = 420,
+            postures = emptyList(),
+            skinName = "pixel_9_pro_fold",
+        )
+
+        SkinMatcher.pick(foldVariants, hw, 540, 1212) shouldBe "pixel_9_pro_fold/closed"
+    }
+
+    @Test
+    fun `foldable frame matching default aspect picks default variant`() {
+        val hw = EmulatorHardware(
+            width = 2076,
+            height = 2152,
+            density = 420,
+            postures = emptyList(),
+            skinName = "pixel_9_pro_fold",
+        )
+
+        SkinMatcher.pick(foldVariants, hw, 1038, 1076) shouldBe "pixel_9_pro_fold/default"
+    }
+
+    @Test
+    fun `rotated closed frame picks closed variant`() {
+        val hw = EmulatorHardware(
+            width = 2076,
+            height = 2152,
+            density = 420,
+            postures = emptyList(),
+            skinName = "pixel_9_pro_fold",
+        )
+
+        SkinMatcher.pick(foldVariants, hw, 1212, 540) shouldBe "pixel_9_pro_fold/closed"
+    }
+
+    @Test
+    fun `size fallback to a foldable variant re-picks by frame aspect`() {
+        val hw = EmulatorHardware(
+            width = 2076,
+            height = 2152,
+            density = 420,
+            postures = emptyList(),
+            skinName = null,
+        )
+
+        SkinMatcher.pick(foldVariants, hw, 540, 1212) shouldBe "pixel_9_pro_fold/closed"
+    }
 }

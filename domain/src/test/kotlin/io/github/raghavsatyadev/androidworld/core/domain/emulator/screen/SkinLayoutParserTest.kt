@@ -101,4 +101,23 @@ class SkinLayoutParserTest {
             mask = null,
         )
     }
+
+    @Test
+    fun `landscape-only layout (unfolded foldable) uses that layout's frame and offsets`() {
+        val unfolded = "parts { device { display { width 2076 height 2152 x 0 y 0 } } " +
+            "portrait { background { image back.webp } foreground { mask mask.webp } } } " +
+            "layouts { landscape { width 2204 height 2274 event EV_SW:0:1 " +
+            "part1 { name portrait x 0 y 0 } part2 { name device x 62 y 62 } } }"
+        SkinLayoutParser.parse(unfolded) shouldBe SkinLayout(
+            frameWidth = 2204,
+            frameHeight = 2274,
+            displayX = 62,
+            displayY = 62,
+            displayWidth = 2076,
+            displayHeight = 2152,
+            cornerRadius = 0,
+            background = "back.webp",
+            mask = "mask.webp",
+        )
+    }
 }

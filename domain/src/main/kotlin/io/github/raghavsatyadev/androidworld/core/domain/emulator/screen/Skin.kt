@@ -1,5 +1,7 @@
 package io.github.raghavsatyadev.androidworld.core.domain.emulator.screen
 
+import kotlin.math.abs
+
 /** Parsed Android SDK emulator skin layout description. */
 data class SkinLayout(
     val frameWidth: Int,
@@ -73,7 +75,11 @@ object SkinLayoutParser {
         val mask = portraitPart?.children?.get("foreground")?.values?.get("mask")
 
         val layouts = root.children["layouts"]
+        // Most skins name their layout "portrait"; some (e.g. unfolded foldables) only have "landscape".
         val portraitLayout = layouts?.children?.get("portrait")
+            ?: layouts?.children?.values?.firstOrNull { layout ->
+                layout.children.values.any { it.values["name"] == "device" }
+            }
 
         val frameWidth: Int
         val frameHeight: Int
@@ -111,10 +117,27 @@ object SkinLayoutParser {
 
 /** Selects the best matching skin layout for a given [EmulatorHardware]. */
 object SkinMatcher {
-    fun pick(available: Map<String, SkinLayout>, hardware: EmulatorHardware): String? {
-        val preferred = hardware.skinName
-        if (preferred != null && preferred in available) {
-            return preferred
+    /**
+     * Returns the key of the skin in [available] to use for [hardware], or null if none fits.
+     *
+     * 1. An exact `hardware.skinName` key wins. If only variant keys (`name/sub`) exist for that
+     *    name, one variant is chosen for the frame.
+     * 2. Otherwise the first layout whose display size matches the hardware (either orientation)
+     *    is used. If it is a variant key, its siblings are re-picked for the frame.
+     *
+     * [frameWidth] and [frameHeight] are the current frame size; 0 means unknown.
+     */
+    fun pick(
+        available: Map<String, SkinLayout>,
+        hardware: EmulatorHardware,
+        frameWidth: Int = 0,
+        frameHeight: Int = 0,
+    ): String? {
+        val base = hardware.skinName
+        if (base != null) {
+            if (base in available) return base
+            val variants = available.keys.filter { it.startsWith("$base/") }
+            if (variants.isNotEmpty()) return pickVariant(variants, available, frameWidth, frameHeight)
         }
         val hwW = hardware.width
         val hwH = hardware.height
@@ -125,10 +148,41 @@ object SkinMatcher {
                 (layout.displayWidth == hwH && layout.displayHeight == hwW)
         }.keys
 
-        return matches.minWithOrNull(
+        val picked = matches.minWithOrNull(
             compareBy<String> { name -> if (name.startsWith("pixel", ignoreCase = true)) 0 else 1 }
                 .thenBy { it.length }
                 .thenBy { it }
-        )
+        ) ?: return null
+
+        if (!picked.contains('/') || frameWidth <= 0 || frameHeight <= 0) return picked
+        val prefix = picked.substringBefore('/') + "/"
+        val siblings = available.keys.filter { it.startsWith(prefix) }
+        return pickVariant(siblings, available, frameWidth, frameHeight)
     }
+
+    /**
+     * Chooses among variant [candidates] by display aspect ratio closest to the frame's
+     * (orientation-independent). Without frame dimensions, prefers `/default`, else the first by name.
+     */
+    private fun pickVariant(
+        candidates: List<String>,
+        available: Map<String, SkinLayout>,
+        frameWidth: Int,
+        frameHeight: Int,
+    ): String? {
+        if (candidates.isEmpty()) return null
+        if (frameWidth > 0 && frameHeight > 0) {
+            val frameAspect = aspect(frameWidth, frameHeight)
+            return candidates.minWithOrNull(
+                compareBy<String> { name ->
+                    val layout = available.getValue(name)
+                    abs(aspect(layout.displayWidth, layout.displayHeight) - frameAspect)
+                }.thenBy { it }
+            )
+        }
+        return candidates.sorted().firstOrNull { it.endsWith("/default") } ?: candidates.minOrNull()
+    }
+
+    /** Orientation-independent aspect ratio, max / min. */
+    private fun aspect(w: Int, h: Int): Float = maxOf(w, h).toFloat() / minOf(w, h).coerceAtLeast(1)
 }

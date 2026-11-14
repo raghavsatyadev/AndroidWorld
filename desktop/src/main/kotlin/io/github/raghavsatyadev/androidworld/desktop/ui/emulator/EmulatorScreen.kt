@@ -40,6 +40,7 @@ import io.github.raghavsatyadev.androidworld.core.domain.emulator.screen.SkinLay
 import io.github.raghavsatyadev.androidworld.core.domain.emulator.screen.SkinMatcher
 import io.github.raghavsatyadev.androidworld.desktop.di.AppGraph
 import io.github.raghavsatyadev.androidworld.desktop.ui.components.EmptyState
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -81,18 +82,25 @@ fun EmulatorScreen(graph: AppGraph) {
     var showFrame by remember { mutableStateOf(true) }
 
     val skins = graph.emulatorScreen.skins
+    // Re-pick the skin when the frame's aspect changes (e.g. a foldable opening or closing).
+    val frameAspectKey = state.frame?.let { f ->
+        val a = maxOf(f.width, f.height).toFloat() / minOf(f.width, f.height).coerceAtLeast(1)
+        (a * 20).roundToInt()
+    }
     val skinPair by produceState<Pair<SkinLayout?, ImageBitmap?>>(
         initialValue = Pair(null, null),
         key1 = state.hardware,
+        key2 = frameAspectKey,
     ) {
         val hw = state.hardware
         if (hw == null) {
             value = Pair(null, null)
             return@produceState
         }
+        val f = state.frame
         withContext(Dispatchers.IO) {
             val layouts = skins.layouts()
-            val name = SkinMatcher.pick(layouts, hw)
+            val name = SkinMatcher.pick(layouts, hw, f?.width ?: 0, f?.height ?: 0)
             val layout = name?.let { layouts[it] }
             val background = name?.let { skins.background(it) }
             value = Pair(layout, background)
