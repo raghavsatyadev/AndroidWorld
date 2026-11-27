@@ -82,7 +82,7 @@ private fun guideFor(tool: ToolId) = when (tool) {
 
 private fun copyText(text: String) = Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
 
-private fun openInBrowser(url: String) {
+internal fun openInBrowser(url: String) {
     Thread { runCatching { Desktop.getDesktop().browse(URI(url)) } }.start()
 }
 

@@ -101,6 +101,8 @@ val composeRulesWithoutMetadata by tasks.registering {
     }
 }
 
+apply(from = "msix.gradle.kts")
+
 // After the Compose plugin, which sets its own rules file in afterEvaluate.
 afterEvaluate {
     tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractProguardTask>().configureEach {

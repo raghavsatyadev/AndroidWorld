@@ -37,6 +37,7 @@ fun SettingsScreen(graph: AppGraph, darkTheme: Boolean?, onDarkTheme: (Boolean?)
         McpSettingsCard(graph)
         ToolsCard(graph)
         AppearanceCard(graph, darkTheme, onDarkTheme)
+        AboutCard()
     }
 }
 
