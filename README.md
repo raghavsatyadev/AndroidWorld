@@ -41,6 +41,13 @@ See [FEATURES.md](FEATURES.md) for the full feature matrix and what is still ope
 Modules: `:domain`, `:application`, `:adapters-jvm` and `:adapters-adb` are the device core
 (package `io.github.raghavsatyadev.androidworld.core`); `:desktop` is the app (package `io.github.raghavsatyadev.androidworld.desktop`).
 
+## Support
+
+Free to use. If it helps you, [pay by UPI (India)](https://raghavsatyadev.github.io/donate/) or scan:
+<!-- Add when the profile is live: [GitHub Sponsors](https://github.com/sponsors/raghavsatyadev) -->
+
+<img src="https://raghavsatyadev.github.io/donate/upi-qr.png" width="180" alt="UPI QR code for satyadev@goaxb">
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Third-party code keeps its own license, listed below.
