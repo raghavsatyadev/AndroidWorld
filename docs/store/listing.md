@@ -42,7 +42,7 @@ AndroidWorld is a desktop app for Android developers and testers. It puts the de
 It works with the Android SDK platform tools (adb) you already have. Connect a phone with USB or wireless debugging, or start an emulator, and pick it from the device list.
 
 DEVICES AND LOGS
-See device facts at a glance, control the app in front, and take screenshots straight to a folder and the clipboard. Read logcat live with level, search and package filters.
+See device facts, control the app in front, and take screenshots straight to a folder and the clipboard. Read logcat live with level, search and package filters.
 
 APPS AND THEIR DATA
 Browse installed apps, launch, stop, clear or uninstall them, and look inside debuggable apps: edit shared preferences and SQLite databases, check permissions, and test deep links and app links.
@@ -57,12 +57,12 @@ EMULATORS
 List, start, stop, create and delete Android virtual devices through Google's android command-line tool.
 
 FILES, COMMANDS AND SHELL
-Browse and pull device files, run common shell commands from a curated catalog, read dumpsys output, and use an adb shell terminal.
+Browse and pull device files, run common shell commands from a built-in list, read dumpsys output, and use an adb shell terminal.
 
 FOR CODING AGENTS
 Turn on the built-in MCP server and connect Claude Code in one click, or any other MCP client. Agents can take screenshots, read the screen's UI tree, tap, type and swipe, and read apps, preferences, databases and logs. The server listens only on your computer, needs an access key, and is off until you turn it on.
 
-PRIVATE BY DESIGN
+PRIVACY
 No account, no ads, no analytics. Your settings stay on your computer, and device data goes only to the tools and agents you connect.
 
 Requirements: Android SDK platform tools (adb). Optional: Google's android command-line tool for emulators, and scrcpy for screen share. The app shows how to install each.
