@@ -7,6 +7,14 @@
 A Compose Multiplatform desktop app (Material 3 Expressive) for working with Android devices and
 emulators. It also runs an MCP server, so coding agents can see and drive the selected device.
 
+<p align="center">
+  <img src="docs/store/screenshots/01-device.png" width="100%" alt="Device screen with device facts, the app in front and a remote control for an emulator">
+</p>
+<p align="center">
+  <img src="docs/store/screenshots/02-logcat.png" width="49%" alt="Live logcat with level, text and package filters">
+  <img src="docs/store/screenshots/03-commands.png" width="49%" alt="Catalog of common adb shell commands with category filters">
+</p>
+
 What it does:
 
 - Device list and selection, device facts, current app controls, screenshots
